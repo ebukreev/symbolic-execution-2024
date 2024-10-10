@@ -340,7 +340,7 @@ func checkResultWithPathCondition(t *testing.T, pathCondition SymbolicExpression
 	solver := CreateSolver()
 	smtBuilder := SmtBuilder{Context: solver.Context}
 
-	solver.SmtSolver.Assert(smtBuilder.BuildSmt(pathCondition).(z3.Bool))
+	solver.SmtSolver.Assert(smtBuilder.BuildSmt(pathCondition)[0].(z3.Bool))
 
 	resultSymbolicVar := &InputValue{Name: "res"}
 	if isFloatResult {
@@ -349,8 +349,8 @@ func checkResultWithPathCondition(t *testing.T, pathCondition SymbolicExpression
 		resultSymbolicVar.Type = "int"
 	}
 
-	res := smtBuilder.BuildSmt(resultSymbolicVar)
-	expressionSmt := smtBuilder.BuildSmt(resultExpression)
+	res := smtBuilder.BuildSmt(resultSymbolicVar)[0]
+	expressionSmt := smtBuilder.BuildSmt(resultExpression)[0]
 
 	if isFloatResult {
 		solver.SmtSolver.Assert(res.(z3.Float).Eq(expressionSmt.(z3.Float)))
@@ -359,7 +359,10 @@ func checkResultWithPathCondition(t *testing.T, pathCondition SymbolicExpression
 	}
 
 	sat, err := solver.SmtSolver.Check()
-	if !sat || err != nil {
+	if !sat {
+		t.Fatal("UNSAT")
+	}
+	if err != nil {
 		t.Fatal(err)
 	}
 

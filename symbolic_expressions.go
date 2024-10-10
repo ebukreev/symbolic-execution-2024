@@ -74,3 +74,8 @@ type ComplexLiteral[T float32 | float64] struct {
 	Real      T
 	Imaginary T
 }
+
+type FunctionCall struct {
+	Signature string
+	Arguments []SymbolicExpression
+}

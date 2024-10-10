@@ -9,125 +9,141 @@ type SmtBuilder struct {
 	Context *z3.Context
 }
 
-func (sb *SmtBuilder) BuildSmt(expression SymbolicExpression) z3.Value {
+func (sb *SmtBuilder) BuildSmt(expression SymbolicExpression) []z3.Value {
 	switch expression.(type) {
 	case *BinaryOperation:
 		left := sb.BuildSmt(expression.(*BinaryOperation).Left)
 		right := sb.BuildSmt(expression.(*BinaryOperation).Right)
 		switch expression.(*BinaryOperation).Type {
 		case Add:
-			if left.Sort().Kind() == z3.KindBV && right.Sort().Kind() == z3.KindBV {
-				return left.(z3.BV).Add(right.(z3.BV))
-			} else if left.Sort().Kind() == z3.KindFloatingPoint && right.Sort().Kind() == z3.KindFloatingPoint {
-				return left.(z3.Float).Add(right.(z3.Float))
-			} else {
-				panic("unexpected sort")
-			}
+			return processExpressions(left, right,
+				func(left z3.BV, right z3.BV) z3.Value {
+					return left.Add(right)
+				}, func(left z3.Float, right z3.Float) z3.Value {
+					return left.Add(right)
+				}, func(left z3.Bool, right z3.Bool) z3.Value {
+					panic("unexpected sort")
+				})
 		case Sub:
-			if left.Sort().Kind() == z3.KindBV && right.Sort().Kind() == z3.KindBV {
-				return left.(z3.BV).Sub(right.(z3.BV))
-			} else if left.Sort().Kind() == z3.KindFloatingPoint && right.Sort().Kind() == z3.KindFloatingPoint {
-				return left.(z3.Float).Sub(right.(z3.Float))
-			} else {
-				panic("unexpected sort")
-			}
+			return processExpressions(left, right,
+				func(left z3.BV, right z3.BV) z3.Value {
+					return left.Sub(right)
+				}, func(left z3.Float, right z3.Float) z3.Value {
+					return left.Sub(right)
+				}, func(left z3.Bool, right z3.Bool) z3.Value {
+					panic("unexpected sort")
+				})
 		case Mul:
-			if left.Sort().Kind() == z3.KindBV && right.Sort().Kind() == z3.KindBV {
-				return left.(z3.BV).Mul(right.(z3.BV))
-			} else if left.Sort().Kind() == z3.KindFloatingPoint && right.Sort().Kind() == z3.KindFloatingPoint {
-				return left.(z3.Float).Mul(right.(z3.Float))
-			} else {
-				panic("unexpected sort")
-			}
+			return processExpressions(left, right,
+				func(left z3.BV, right z3.BV) z3.Value {
+					return left.Mul(right)
+				}, func(left z3.Float, right z3.Float) z3.Value {
+					return left.Mul(right)
+				}, func(left z3.Bool, right z3.Bool) z3.Value {
+					panic("unexpected sort")
+				})
 		case Div:
-			if left.Sort().Kind() == z3.KindBV && right.Sort().Kind() == z3.KindBV {
-				return left.(z3.BV).SDiv(right.(z3.BV))
-			} else if left.Sort().Kind() == z3.KindFloatingPoint && right.Sort().Kind() == z3.KindFloatingPoint {
-				return left.(z3.Float).Div(right.(z3.Float))
-			} else {
-				panic("unexpected sort")
-			}
+			return processExpressions(left, right,
+				func(left z3.BV, right z3.BV) z3.Value {
+					return left.SDiv(right)
+				}, func(left z3.Float, right z3.Float) z3.Value {
+					return left.Div(right)
+				}, func(left z3.Bool, right z3.Bool) z3.Value {
+					panic("unexpected sort")
+				})
 		case Mod:
-			if left.Sort().Kind() == z3.KindBV && right.Sort().Kind() == z3.KindBV {
-				return left.(z3.BV).SRem(right.(z3.BV))
-			} else if left.Sort().Kind() == z3.KindFloatingPoint && right.Sort().Kind() == z3.KindFloatingPoint {
-				return left.(z3.Float).Rem(right.(z3.Float))
-			} else {
-				panic("unexpected sort")
-			}
+			return processExpressions(left, right,
+				func(left z3.BV, right z3.BV) z3.Value {
+					return left.SRem(right)
+				}, func(left z3.Float, right z3.Float) z3.Value {
+					return left.Rem(right)
+				}, func(left z3.Bool, right z3.Bool) z3.Value {
+					panic("unexpected sort")
+				})
 		case And:
-			if left.Sort().Kind() == z3.KindBV && right.Sort().Kind() == z3.KindBV {
-				return left.(z3.BV).And(right.(z3.BV))
-			} else if left.Sort().Kind() == z3.KindBool && right.Sort().Kind() == z3.KindBool {
-				return left.(z3.Bool).And(right.(z3.Bool))
-			} else {
-				panic("unexpected sort")
-			}
+			return processExpressions(left, right,
+				func(left z3.BV, right z3.BV) z3.Value {
+					return left.And(right)
+				}, func(left z3.Float, right z3.Float) z3.Value {
+					panic("unexpected sort")
+				}, func(left z3.Bool, right z3.Bool) z3.Value {
+					return left.And(right)
+				})
 		case Or:
-			if left.Sort().Kind() == z3.KindBV && right.Sort().Kind() == z3.KindBV {
-				return left.(z3.BV).Or(right.(z3.BV))
-			} else if left.Sort().Kind() == z3.KindBool && right.Sort().Kind() == z3.KindBool {
-				return left.(z3.Bool).Or(right.(z3.Bool))
-			} else {
-				panic("unexpected sort")
-			}
+			return processExpressions(left, right,
+				func(left z3.BV, right z3.BV) z3.Value {
+					return left.Or(right)
+				}, func(left z3.Float, right z3.Float) z3.Value {
+					panic("unexpected sort")
+				}, func(left z3.Bool, right z3.Bool) z3.Value {
+					return left.Or(right)
+				})
 		case Xor:
-			if left.Sort().Kind() == z3.KindBV && right.Sort().Kind() == z3.KindBV {
-				return left.(z3.BV).Xor(right.(z3.BV))
-			} else if left.Sort().Kind() == z3.KindBool && right.Sort().Kind() == z3.KindBool {
-				return left.(z3.Bool).Xor(right.(z3.Bool))
-			} else {
-				panic("unexpected sort")
-			}
+			return processExpressions(left, right,
+				func(left z3.BV, right z3.BV) z3.Value {
+					return left.Xor(right)
+				}, func(left z3.Float, right z3.Float) z3.Value {
+					panic("unexpected sort")
+				}, func(left z3.Bool, right z3.Bool) z3.Value {
+					return left.Xor(right)
+				})
 		case AndNot:
-			if left.Sort().Kind() == z3.KindBV && right.Sort().Kind() == z3.KindBV {
-				return left.(z3.BV).And(right.(z3.BV).Not())
-			} else {
-				panic("unexpected sort")
-			}
+			return processExpressions(left, right,
+				func(left z3.BV, right z3.BV) z3.Value {
+					return left.And(right.Not())
+				}, func(left z3.Float, right z3.Float) z3.Value {
+					panic("unexpected sort")
+				}, func(left z3.Bool, right z3.Bool) z3.Value {
+					panic("unexpected sort")
+				})
 		case LeftShift:
-			if left.Sort().Kind() == z3.KindBV && right.Sort().Kind() == z3.KindBV {
-				return left.(z3.BV).Lsh(right.(z3.BV))
-			} else {
-				panic("unexpected sort")
-			}
+			return processExpressions(left, right,
+				func(left z3.BV, right z3.BV) z3.Value {
+					return left.Lsh(right)
+				}, func(left z3.Float, right z3.Float) z3.Value {
+					panic("unexpected sort")
+				}, func(left z3.Bool, right z3.Bool) z3.Value {
+					panic("unexpected sort")
+				})
 		case RightShift:
-			if left.Sort().Kind() == z3.KindBV && right.Sort().Kind() == z3.KindBV {
-				return left.(z3.BV).URsh(right.(z3.BV))
-			} else {
-				panic("unexpected sort")
-			}
+			return processExpressions(left, right,
+				func(left z3.BV, right z3.BV) z3.Value {
+					return left.URsh(right)
+				}, func(left z3.Float, right z3.Float) z3.Value {
+					panic("unexpected sort")
+				}, func(left z3.Bool, right z3.Bool) z3.Value {
+					panic("unexpected sort")
+				})
 		}
 
 	case *Equals:
 		left := sb.BuildSmt(expression.(*Equals).Left)
 		right := sb.BuildSmt(expression.(*Equals).Right)
 
-		if left.Sort().Kind() == z3.KindBV && right.Sort().Kind() == z3.KindBV {
-			return left.(z3.BV).Eq(right.(z3.BV))
-		} else if left.Sort().Kind() == z3.KindFloatingPoint && right.Sort().Kind() == z3.KindFloatingPoint {
-			return left.(z3.Float).Eq(right.(z3.Float))
-		} else if left.Sort().Kind() == z3.KindBool && right.Sort().Kind() == z3.KindBool {
-			return left.(z3.Bool).Eq(right.(z3.Bool))
-		} else {
-			panic("unexpected sort")
-		}
+		return processExpressions(left, right,
+			func(left z3.BV, right z3.BV) z3.Value {
+				return left.Eq(right)
+			}, func(left z3.Float, right z3.Float) z3.Value {
+				return left.Eq(right)
+			}, func(left z3.Bool, right z3.Bool) z3.Value {
+				return left.Eq(right)
+			})
 
 	case *Cast:
-		value := sb.BuildSmt(expression.(*Cast).Value)
+		value := sb.BuildSmt(expression.(*Cast).Value)[0]
 		if value.Sort().Kind() == z3.KindBV && expression.(*Cast).To == "float64" {
-			return value.(z3.BV).IEEEToFloat(sb.Context.FloatSort(11, 53))
+			return []z3.Value{value.(z3.BV).IEEEToFloat(sb.Context.FloatSort(11, 53))}
 		} else {
 			panic("unsupported cast")
 		}
 
 	case *Not:
-		operand := sb.BuildSmt(expression.(*Not).Operand)
+		operand := sb.BuildSmt(expression.(*Not).Operand)[0]
 
 		if operand.Sort().Kind() == z3.KindBV {
-			return operand.(z3.BV).Not()
+			return []z3.Value{operand.(z3.BV).Not()}
 		} else if operand.Sort().Kind() == z3.KindBool {
-			return operand.(z3.Bool).Not()
+			return []z3.Value{operand.(z3.Bool).Not()}
 		} else {
 			panic("unexpected sort")
 		}
@@ -136,57 +152,93 @@ func (sb *SmtBuilder) BuildSmt(expression SymbolicExpression) z3.Value {
 		left := sb.BuildSmt(expression.(*LT).Left)
 		right := sb.BuildSmt(expression.(*LT).Right)
 
-		if left.Sort().Kind() == z3.KindBV && right.Sort().Kind() == z3.KindBV {
-			return left.(z3.BV).SLT(right.(z3.BV))
-		} else if left.Sort().Kind() == z3.KindFloatingPoint && right.Sort().Kind() == z3.KindFloatingPoint {
-			return left.(z3.Float).LT(right.(z3.Float))
-		} else {
-			panic("unexpected sort")
-		}
+		return processExpressions(left, right,
+			func(left z3.BV, right z3.BV) z3.Value {
+				return left.SLT(right)
+			}, func(left z3.Float, right z3.Float) z3.Value {
+				return left.LT(right)
+			}, func(left z3.Bool, right z3.Bool) z3.Value {
+				panic("unexpected sort")
+			})
 
 	case *GT:
 		left := sb.BuildSmt(expression.(*GT).Left)
 		right := sb.BuildSmt(expression.(*GT).Right)
 
-		if left.Sort().Kind() == z3.KindBV && right.Sort().Kind() == z3.KindBV {
-			return left.(z3.BV).SGT(right.(z3.BV))
-		} else if left.Sort().Kind() == z3.KindFloatingPoint && right.Sort().Kind() == z3.KindFloatingPoint {
-			return left.(z3.Float).GT(right.(z3.Float))
-		} else {
-			panic("unexpected sort")
-		}
+		return processExpressions(left, right,
+			func(left z3.BV, right z3.BV) z3.Value {
+				return left.SGT(right)
+			}, func(left z3.Float, right z3.Float) z3.Value {
+				return left.GT(right)
+			}, func(left z3.Bool, right z3.Bool) z3.Value {
+				panic("unexpected sort")
+			})
 
 	case *Literal[bool]:
-		return sb.Context.FromBool(expression.(*Literal[bool]).Value)
+		return []z3.Value{sb.Context.FromBool(expression.(*Literal[bool]).Value)}
 	case *Literal[uint8]:
-		return sb.Context.FromInt(int64(expression.(*Literal[uint8]).Value), sb.Context.BVSort(8))
+		return []z3.Value{sb.Context.FromInt(int64(expression.(*Literal[uint8]).Value), sb.Context.BVSort(8))}
 	case *Literal[uint16]:
-		return sb.Context.FromInt(int64(expression.(*Literal[uint16]).Value), sb.Context.BVSort(16))
+		return []z3.Value{sb.Context.FromInt(int64(expression.(*Literal[uint16]).Value), sb.Context.BVSort(16))}
 	case *Literal[uint32]:
-		return sb.Context.FromInt(int64(expression.(*Literal[uint32]).Value), sb.Context.BVSort(32))
+		return []z3.Value{sb.Context.FromInt(int64(expression.(*Literal[uint32]).Value), sb.Context.BVSort(32))}
 	case *Literal[uint64]:
-		return sb.Context.FromInt(int64(expression.(*Literal[uint64]).Value), sb.Context.BVSort(64))
+		return []z3.Value{sb.Context.FromInt(int64(expression.(*Literal[uint64]).Value), sb.Context.BVSort(64))}
 	case *Literal[int8]:
-		return sb.Context.FromInt(int64(expression.(*Literal[int8]).Value), sb.Context.BVSort(8))
+		return []z3.Value{sb.Context.FromInt(int64(expression.(*Literal[int8]).Value), sb.Context.BVSort(8))}
 	case *Literal[int16]:
-		return sb.Context.FromInt(int64(expression.(*Literal[int16]).Value), sb.Context.BVSort(16))
+		return []z3.Value{sb.Context.FromInt(int64(expression.(*Literal[int16]).Value), sb.Context.BVSort(16))}
 	case *Literal[int32]:
-		return sb.Context.FromInt(int64(expression.(*Literal[int32]).Value), sb.Context.BVSort(32))
+		return []z3.Value{sb.Context.FromInt(int64(expression.(*Literal[int32]).Value), sb.Context.BVSort(32))}
 	case *Literal[int64]:
-		return sb.Context.FromInt(expression.(*Literal[int64]).Value, sb.Context.BVSort(64))
+		return []z3.Value{sb.Context.FromInt(expression.(*Literal[int64]).Value, sb.Context.BVSort(64))}
 	case *Literal[float32]:
-		return sb.Context.FromFloat32(expression.(*Literal[float32]).Value, sb.Context.FloatSort(8, 24))
+		return []z3.Value{sb.Context.FromFloat32(expression.(*Literal[float32]).Value, sb.Context.FloatSort(8, 24))}
 	case *Literal[float64]:
-		return sb.Context.FromFloat64(expression.(*Literal[float64]).Value, sb.Context.FloatSort(11, 53))
+		return []z3.Value{sb.Context.FromFloat64(expression.(*Literal[float64]).Value, sb.Context.FloatSort(11, 53))}
 	case *Literal[int]:
-		return sb.Context.FromInt(int64(expression.(*Literal[int]).Value), sb.Context.BVSort(bits.UintSize))
+		return []z3.Value{sb.Context.FromInt(int64(expression.(*Literal[int]).Value), sb.Context.BVSort(bits.UintSize))}
 	case *Literal[uint]:
-		return sb.Context.FromInt(int64(expression.(*Literal[uint]).Value), sb.Context.BVSort(bits.UintSize))
+		return []z3.Value{sb.Context.FromInt(int64(expression.(*Literal[uint]).Value), sb.Context.BVSort(bits.UintSize))}
 	case *Literal[uintptr]:
-		return sb.Context.FromInt(int64(expression.(*Literal[uintptr]).Value), sb.Context.BVSort(bits.UintSize))
+		return []z3.Value{sb.Context.FromInt(int64(expression.(*Literal[uintptr]).Value), sb.Context.BVSort(bits.UintSize))}
 
 	case *InputValue:
-		return sb.Context.Const(expression.(*InputValue).Name, sb.typeSignatureToSort(expression.(*InputValue).Type))
+		expressionName := expression.(*InputValue).Name
+		expressionType := expression.(*InputValue).Type
+		if expressionType == "complex64" {
+			return []z3.Value{
+				sb.Context.Const("$R_"+expressionName, sb.Context.FloatSort(8, 24)),
+				sb.Context.Const("$I_"+expressionName, sb.Context.FloatSort(8, 24)),
+			}
+		}
+		if expressionType == "complex128" {
+			return []z3.Value{
+				sb.Context.Const("$R_"+expressionName, sb.Context.FloatSort(11, 53)),
+				sb.Context.Const("$I_"+expressionName, sb.Context.FloatSort(11, 53)),
+			}
+		}
+		return []z3.Value{sb.Context.Const(expressionName, sb.typeSignatureToSort(expressionType))}
+
+	case *ComplexLiteral[float32]:
+		return []z3.Value{
+			sb.BuildSmt(expression.(*ComplexLiteral[float32]).Real)[0],
+			sb.BuildSmt(expression.(*ComplexLiteral[float32]).Imaginary)[0],
+		}
+	case *ComplexLiteral[float64]:
+		return []z3.Value{
+			sb.BuildSmt(expression.(*ComplexLiteral[float64]).Real)[0],
+			sb.BuildSmt(expression.(*ComplexLiteral[float64]).Imaginary)[0],
+		}
+
+	case *FunctionCall:
+		args := expression.(*FunctionCall).Arguments
+		switch expression.(*FunctionCall).Signature {
+		case "builtin_real(ComplexType)":
+			return []z3.Value{sb.BuildSmt(args[0])[0]}
+		case "builtin_imag(ComplexType)":
+			return []z3.Value{sb.BuildSmt(args[0])[1]}
+		}
 	}
 	panic("unexpected expression")
 }
@@ -211,4 +263,38 @@ func (sb *SmtBuilder) typeSignatureToSort(signature string) z3.Sort {
 		return sb.Context.BVSort(bits.UintSize)
 	}
 	panic("unexpected type signature")
+}
+
+func processExpressions(leftArgs []z3.Value, rightArgs []z3.Value,
+	bvOperation func(left z3.BV, right z3.BV) z3.Value,
+	fpOperation func(left z3.Float, right z3.Float) z3.Value,
+	boolOperation func(left z3.Bool, right z3.Bool) z3.Value) []z3.Value {
+
+	if len(leftArgs) == 1 && len(rightArgs) == 1 {
+		left := leftArgs[0]
+		right := rightArgs[0]
+
+		if left.Sort().Kind() == z3.KindBV && right.Sort().Kind() == z3.KindBV {
+			return []z3.Value{
+				bvOperation(left.(z3.BV), right.(z3.BV)),
+			}
+		} else if left.Sort().Kind() == z3.KindFloatingPoint && right.Sort().Kind() == z3.KindFloatingPoint {
+			return []z3.Value{
+				fpOperation(left.(z3.Float), right.(z3.Float)),
+			}
+		} else if left.Sort().Kind() == z3.KindBool && right.Sort().Kind() == z3.KindBool {
+			return []z3.Value{
+				boolOperation(left.(z3.Bool), right.(z3.Bool)),
+			}
+		} else {
+			panic("unexpected sort")
+		}
+	} else if len(leftArgs) == 2 && len(rightArgs) == 2 {
+		return []z3.Value{
+			processExpressions([]z3.Value{leftArgs[0]}, []z3.Value{rightArgs[0]}, bvOperation, fpOperation, boolOperation)[0],
+			processExpressions([]z3.Value{leftArgs[1]}, []z3.Value{rightArgs[1]}, bvOperation, fpOperation, boolOperation)[0],
+		}
+	}
+
+	panic("unexpected state")
 }
