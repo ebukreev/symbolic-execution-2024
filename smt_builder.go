@@ -3,6 +3,8 @@ package main
 import (
 	"github.com/aclements/go-z3/z3"
 	"math/bits"
+	"strconv"
+	"strings"
 )
 
 type SmtBuilder struct {
@@ -218,6 +220,11 @@ func (sb *SmtBuilder) BuildSmt(expression SymbolicExpression) []z3.Value {
 				sb.Context.Const("$I_"+expressionName, sb.Context.FloatSort(11, 53)),
 			}
 		}
+		if strings.HasPrefix(expressionType, "[]") {
+			return []z3.Value{
+				sb.Context.Const(expressionName, sb.typeSignatureToSort(expressionType)),
+			}
+		}
 		return []z3.Value{sb.Context.Const(expressionName, sb.typeSignatureToSort(expressionType))}
 
 	case *ComplexLiteral[float32]:
@@ -233,17 +240,52 @@ func (sb *SmtBuilder) BuildSmt(expression SymbolicExpression) []z3.Value {
 
 	case *FunctionCall:
 		args := expression.(*FunctionCall).Arguments
-		switch expression.(*FunctionCall).Signature {
+		signature := expression.(*FunctionCall).Signature
+		if strings.HasPrefix(signature, "{") {
+			receiverType := strings.Split(signature, "_")[0]
+			argTypes := strings.Split(receiverType[1:len(receiverType)-1], ",")
+			index, _ := strconv.Atoi(strings.SplitAfter(signature, "_")[1])
+
+			tpe := GetType(args[0])
+			funcDecl := sb.uninterpretedFunction(signature, []string{tpe}, argTypes[index])
+			return []z3.Value{funcDecl.Apply(sb.BuildSmt(args[0])[0])}
+		}
+		switch signature {
 		case "builtin_real(ComplexType)":
 			return []z3.Value{sb.BuildSmt(args[0])[0]}
 		case "builtin_imag(ComplexType)":
 			return []z3.Value{sb.BuildSmt(args[0])[1]}
+		case "builtin_len(Type)":
+			_, isArray := expression.(*Array)
+			if isArray {
+				return sb.BuildSmt(expression.(*Array).Size)
+			}
+			funcDecl := sb.uninterpretedFunction(expression.(*FunctionCall).Signature, []string{GetType(args[0])}, "int")
+			return []z3.Value{funcDecl.Apply(sb.BuildSmt(args[0])[0])}
 		}
+
+	case *Array:
+		valueSort := sb.typeSignatureToSort(expression.(Array).ComponentType)
+		array := sb.Context.FreshConst("arr_", sb.Context.ArraySort(sb.typeSignatureToSort("int"), valueSort))
+
+		for key, value := range expression.(Array).KnownValues {
+			array = array.(z3.Array).Store(sb.BuildSmt(key)[0], sb.BuildSmt(value)[0])
+		}
+		return []z3.Value{array}
+
+	case *ArrayAccess:
+		array := sb.BuildSmt(expression.(*ArrayAccess).Array)[0]
+		index := sb.BuildSmt(expression.(*ArrayAccess).Index)[0]
+		return []z3.Value{array.(z3.Array).Select(index)}
 	}
 	panic("unexpected expression")
 }
 
 func (sb *SmtBuilder) typeSignatureToSort(signature string) z3.Sort {
+	if strings.HasPrefix(signature, "[]") {
+		valueSort := sb.typeSignatureToSort(signature[2:])
+		return sb.Context.ArraySort(sb.typeSignatureToSort("int"), valueSort)
+	}
 	switch signature {
 	case "bool":
 		return sb.Context.BoolSort()
@@ -262,7 +304,17 @@ func (sb *SmtBuilder) typeSignatureToSort(signature string) z3.Sort {
 	case "int", "uint", "uintptr":
 		return sb.Context.BVSort(bits.UintSize)
 	}
-	panic("unexpected type signature")
+	return sb.Context.UninterpretedSort(signature)
+}
+
+func GetType(se SymbolicExpression) string {
+	switch se.(type) {
+	case *InputValue:
+		return se.(*InputValue).Type
+	case *ArrayAccess:
+		return GetType(se.(*ArrayAccess).Array)[2:]
+	}
+	panic("unexpected expression")
 }
 
 func processExpressions(leftArgs []z3.Value, rightArgs []z3.Value,
@@ -297,4 +349,16 @@ func processExpressions(leftArgs []z3.Value, rightArgs []z3.Value,
 	}
 
 	panic("unexpected state")
+}
+
+func (sb *SmtBuilder) uninterpretedFunction(signature string, args []string, returnType string) z3.FuncDecl {
+	var argSorts []z3.Sort
+	for _, arg := range args {
+		argSorts = append(argSorts, sb.typeSignatureToSort(arg))
+	}
+	return sb.Context.FuncDecl(
+		strings.Split(strings.SplitAfter(signature, "_")[1], "(")[0],
+		argSorts,
+		sb.typeSignatureToSort(returnType),
+	)
 }

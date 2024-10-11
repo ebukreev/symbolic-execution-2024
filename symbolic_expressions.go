@@ -79,3 +79,14 @@ type FunctionCall struct {
 	Signature string
 	Arguments []SymbolicExpression
 }
+
+type Array struct {
+	ComponentType string
+	Size          SymbolicExpression
+	KnownValues   map[SymbolicExpression]SymbolicExpression
+}
+
+type ArrayAccess struct {
+	Array SymbolicExpression
+	Index SymbolicExpression
+}
