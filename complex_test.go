@@ -259,7 +259,7 @@ func TestNestedComplexOperationsFourthPath(t *testing.T) {
 }
 
 func checkComplexResultAndPathCondition(t *testing.T, pathCondition SymbolicExpression, resultExpression SymbolicExpression, isFloatResult bool) {
-	solver := CreateSolver()
+	solver := CreateSolver(false)
 	smtBuilder := SmtBuilder{Context: solver.Context}
 
 	builtSmt := smtBuilder.BuildSmt(pathCondition)

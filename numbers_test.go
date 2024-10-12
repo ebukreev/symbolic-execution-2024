@@ -337,7 +337,7 @@ func TestNestedBitwiseFourthPath(t *testing.T) {
 }
 
 func checkResultWithPathCondition(t *testing.T, pathCondition SymbolicExpression, resultExpression SymbolicExpression, isFloatResult bool) {
-	solver := CreateSolver()
+	solver := CreateSolver(false)
 	smtBuilder := SmtBuilder{Context: solver.Context}
 
 	solver.SmtSolver.Assert(smtBuilder.BuildSmt(pathCondition)[0].(z3.Bool))
