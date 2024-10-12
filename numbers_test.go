@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/aclements/go-z3/z3"
+	"symbolic-execution-2024/z3"
 	"testing"
 )
 

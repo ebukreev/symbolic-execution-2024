@@ -1,10 +1,10 @@
 package main
 
 import (
-	"github.com/aclements/go-z3/z3"
 	"math/bits"
 	"strconv"
 	"strings"
+	"symbolic-execution-2024/z3"
 )
 
 type SmtBuilder struct {
