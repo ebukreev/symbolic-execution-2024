@@ -121,6 +121,19 @@ func (s *Solver) Check() (sat bool, err error) {
 	return res == C.Z3_L_TRUE, err
 }
 
+func (s *Solver) CheckAssumptions(assumptions []AST) bool {
+	var res C.Z3_lbool
+	s.ctx.do(func() {
+		arr := make([]C.Z3_ast, len(assumptions))
+		for i, assumption := range assumptions {
+			arr[i] = assumption.c
+		}
+		res = C.Z3_solver_check_assumptions(s.ctx.c, s.c, C.uint(len(assumptions)), &arr[0])
+	})
+	runtime.KeepAlive(s)
+	return res == C.Z3_L_TRUE
+}
+
 // Model returns the model for the last Check. Model panics if Check
 // has not been called or the last Check did not return true.
 func (s *Solver) Model() *Model {
