@@ -229,13 +229,13 @@ func (sb *SmtBuilder) BuildSmt(expression SymbolicExpression) []z3.Value {
 
 	case *ComplexLiteral[float32]:
 		return []z3.Value{
-			sb.BuildSmt(expression.(*ComplexLiteral[float32]).Real)[0],
-			sb.BuildSmt(expression.(*ComplexLiteral[float32]).Imaginary)[0],
+			sb.Context.FromFloat32(expression.(*ComplexLiteral[float32]).Real, sb.Context.FloatSort(8, 24)),
+			sb.Context.FromFloat32(expression.(*ComplexLiteral[float32]).Imaginary, sb.Context.FloatSort(8, 24)),
 		}
 	case *ComplexLiteral[float64]:
 		return []z3.Value{
-			sb.BuildSmt(expression.(*ComplexLiteral[float64]).Real)[0],
-			sb.BuildSmt(expression.(*ComplexLiteral[float64]).Imaginary)[0],
+			sb.Context.FromFloat64(expression.(*ComplexLiteral[float64]).Real, sb.Context.FloatSort(11, 53)),
+			sb.Context.FromFloat64(expression.(*ComplexLiteral[float64]).Imaginary, sb.Context.FloatSort(11, 53)),
 		}
 
 	case *FunctionCall:
@@ -265,10 +265,10 @@ func (sb *SmtBuilder) BuildSmt(expression SymbolicExpression) []z3.Value {
 		}
 
 	case *Array:
-		valueSort := sb.typeSignatureToSort(expression.(Array).ComponentType)
+		valueSort := sb.typeSignatureToSort(expression.(*Array).ComponentType)
 		array := sb.Context.FreshConst("arr_", sb.Context.ArraySort(sb.typeSignatureToSort("int"), valueSort))
 
-		for key, value := range expression.(Array).KnownValues {
+		for key, value := range expression.(*Array).KnownValues {
 			array = array.(z3.Array).Store(sb.BuildSmt(key)[0], sb.BuildSmt(value)[0])
 		}
 		return []z3.Value{array}

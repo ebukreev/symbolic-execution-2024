@@ -15,9 +15,15 @@ func main() {
 	Analyse("some-file")
 }
 
-func Analyse(file string) {
+func Analyse(file string, functionName string) Conditional {
 	cfg := BuildCfg(file)
-	Interpret(cfg)
+	for _, member := range cfg.Members {
+		function, ok := member.(*ssa.Function)
+		if ok && function != nil && function.Name() == functionName {
+			return Interpret(function)
+		}
+	}
+	return Conditional{}
 }
 
 func BuildCfg(file string) *ssa.Package {

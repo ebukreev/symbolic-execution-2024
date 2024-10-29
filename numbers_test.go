@@ -1,6 +1,8 @@
 package main
 
 import (
+	"path"
+	"runtime"
 	"symbolic-execution-2024/z3"
 	"testing"
 )
@@ -45,6 +47,19 @@ func TestIntegerOperationsThirdPath(t *testing.T) {
 	}
 
 	checkResultWithPathCondition(t, pc, resExpr, false)
+}
+
+func TestIntegerOperationsInterpretation(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	file := path.Join(path.Dir(filename), "constraints", "numbers.go")
+
+	conditional := Analyse(file, "integerOperations")
+
+	t.Log((&conditional).String())
+
+	for cond, value := range conditional.Options {
+		checkResultWithPathCondition(t, cond, value, false)
+	}
 }
 
 func TestFloatOperationsFirstPath(t *testing.T) {

@@ -2,290 +2,355 @@ package main
 
 import (
 	"golang.org/x/tools/go/ssa"
+	"strconv"
 )
 
-func Interpret(element interface{}) *SymbolicExpression {
+type Interpreter struct {
+	PathCondition SymbolicExpression
+	ReturnValue   Conditional
+}
+
+func Interpret(function *ssa.Function) Conditional {
+	interpreter := Interpreter{PathCondition: &Literal[bool]{true},
+		ReturnValue: Conditional{make(map[SymbolicExpression]SymbolicExpression)}}
+
+	for _, instruction := range function.Blocks[0].Instrs {
+		interpreter.interpret(instruction)
+	}
+
+	return interpreter.ReturnValue
+}
+
+func (interpreter *Interpreter) interpret(element interface{}) SymbolicExpression {
 	switch element.(type) {
-	case *ssa.Package:
-		return interpretPackage(element.(*ssa.Package))
 	case *ssa.Alloc:
-		return interpretAlloc(element.(*ssa.Alloc))
+		return interpreter.interpretAlloc(element.(*ssa.Alloc))
 	case *ssa.BinOp:
-		return interpretBinOp(element.(*ssa.BinOp))
+		return interpreter.interpretBinOp(element.(*ssa.BinOp))
 	case *ssa.Builtin:
-		return interpretBuiltin(element.(*ssa.Builtin))
+		return interpreter.interpretBuiltin(element.(*ssa.Builtin))
 	case *ssa.Call:
-		return interpretCall(element.(*ssa.Call))
+		return interpreter.interpretCall(element.(*ssa.Call))
 	case *ssa.ChangeInterface:
-		return interpretChangeInterface(element.(*ssa.ChangeInterface))
+		return interpreter.interpretChangeInterface(element.(*ssa.ChangeInterface))
 	case *ssa.ChangeType:
-		return interpretChangeType(element.(*ssa.ChangeType))
+		return interpreter.interpretChangeType(element.(*ssa.ChangeType))
 	case *ssa.Const:
-		return interpretConst(element.(*ssa.Const))
+		return interpreter.interpretConst(element.(*ssa.Const))
 	case *ssa.Convert:
-		return interpretConvert(element.(*ssa.Convert))
+		return interpreter.interpretConvert(element.(*ssa.Convert))
 	case *ssa.DebugRef:
-		return interpretDebugRef(element.(*ssa.DebugRef))
+		return interpreter.interpretDebugRef(element.(*ssa.DebugRef))
 	case *ssa.Defer:
-		return interpretDefer(element.(*ssa.Defer))
+		return interpreter.interpretDefer(element.(*ssa.Defer))
 	case *ssa.Extract:
-		return interpretExtract(element.(*ssa.Extract))
+		return interpreter.interpretExtract(element.(*ssa.Extract))
 	case *ssa.Field:
-		return interpretField(element.(*ssa.Field))
+		return interpreter.interpretField(element.(*ssa.Field))
 	case *ssa.FieldAddr:
-		return interpretFieldAddr(element.(*ssa.FieldAddr))
+		return interpreter.interpretFieldAddr(element.(*ssa.FieldAddr))
 	case *ssa.FreeVar:
-		return interpretFreeVar(element.(*ssa.FreeVar))
-	case *ssa.Function:
-		return interpretFunction(element.(*ssa.Function))
+		return interpreter.interpretFreeVar(element.(*ssa.FreeVar))
 	case *ssa.Global:
-		return interpretGlobal(element.(*ssa.Global))
+		return interpreter.interpretGlobal(element.(*ssa.Global))
 	case *ssa.Go:
-		return interpretGo(element.(*ssa.Go))
+		return interpreter.interpretGo(element.(*ssa.Go))
 	case *ssa.If:
-		return interpretIf(element.(*ssa.If))
+		return interpreter.interpretIf(element.(*ssa.If))
 	case *ssa.Index:
-		return interpretIndex(element.(*ssa.Index))
+		return interpreter.interpretIndex(element.(*ssa.Index))
 	case *ssa.IndexAddr:
-		return interpretIndexAddr(element.(*ssa.IndexAddr))
+		return interpreter.interpretIndexAddr(element.(*ssa.IndexAddr))
 	case *ssa.Jump:
-		return interpretJump(element.(*ssa.Jump))
+		return interpreter.interpretJump(element.(*ssa.Jump))
 	case *ssa.Lookup:
-		return interpretLookup(element.(*ssa.Lookup))
+		return interpreter.interpretLookup(element.(*ssa.Lookup))
 	case *ssa.MakeChan:
-		return interpretMakeChan(element.(*ssa.MakeChan))
+		return interpreter.interpretMakeChan(element.(*ssa.MakeChan))
 	case *ssa.MakeClosure:
-		return interpretMakeClosure(element.(*ssa.MakeClosure))
+		return interpreter.interpretMakeClosure(element.(*ssa.MakeClosure))
 	case *ssa.MakeInterface:
-		return interpretMakeInterface(element.(*ssa.MakeInterface))
+		return interpreter.interpretMakeInterface(element.(*ssa.MakeInterface))
 	case *ssa.MakeMap:
-		return interpretMakeMap(element.(*ssa.MakeMap))
+		return interpreter.interpretMakeMap(element.(*ssa.MakeMap))
 	case *ssa.MakeSlice:
-		return interpretMakeSlice(element.(*ssa.MakeSlice))
+		return interpreter.interpretMakeSlice(element.(*ssa.MakeSlice))
 	case *ssa.MapUpdate:
-		return interpretMapUpdate(element.(*ssa.MapUpdate))
+		return interpreter.interpretMapUpdate(element.(*ssa.MapUpdate))
 	case *ssa.MultiConvert:
-		return interpretMultiConvert(element.(*ssa.MultiConvert))
+		return interpreter.interpretMultiConvert(element.(*ssa.MultiConvert))
 	case *ssa.NamedConst:
-		return interpretNamedConst(element.(*ssa.NamedConst))
+		return interpreter.interpretNamedConst(element.(*ssa.NamedConst))
 	case *ssa.Next:
-		return interpretNext(element.(*ssa.Next))
+		return interpreter.interpretNext(element.(*ssa.Next))
 	case *ssa.Panic:
-		return interpretPanic(element.(*ssa.Panic))
+		return interpreter.interpretPanic(element.(*ssa.Panic))
 	case *ssa.Parameter:
-		return interpretParameter(element.(*ssa.Parameter))
+		return interpreter.interpretParameter(element.(*ssa.Parameter))
 	case *ssa.Phi:
-		return interpretPhi(element.(*ssa.Phi))
+		return interpreter.interpretPhi(element.(*ssa.Phi))
 	case *ssa.Range:
-		return interpretRange(element.(*ssa.Range))
+		return interpreter.interpretRange(element.(*ssa.Range))
 	case *ssa.Return:
-		return interpretReturn(element.(*ssa.Return))
+		return interpreter.interpretReturn(element.(*ssa.Return))
 	case *ssa.RunDefers:
-		return interpretRunDefers(element.(*ssa.RunDefers))
+		return interpreter.interpretRunDefers(element.(*ssa.RunDefers))
 	case *ssa.Select:
-		return interpretSelect(element.(*ssa.Select))
+		return interpreter.interpretSelect(element.(*ssa.Select))
 	case *ssa.Send:
-		return interpretSend(element.(*ssa.Send))
+		return interpreter.interpretSend(element.(*ssa.Send))
 	case *ssa.Slice:
-		return interpretSlice(element.(*ssa.Slice))
+		return interpreter.interpretSlice(element.(*ssa.Slice))
 	case *ssa.SliceToArrayPointer:
-		return interpretSliceToArrayPointer(element.(*ssa.SliceToArrayPointer))
+		return interpreter.interpretSliceToArrayPointer(element.(*ssa.SliceToArrayPointer))
 	case *ssa.Store:
-		return interpretStore(element.(*ssa.Store))
+		return interpreter.interpretStore(element.(*ssa.Store))
 	case *ssa.Type:
-		return interpretType(element.(*ssa.Type))
+		return interpreter.interpretType(element.(*ssa.Type))
 	case *ssa.TypeAssert:
-		return interpretTypeAssert(element.(*ssa.TypeAssert))
+		return interpreter.interpretTypeAssert(element.(*ssa.TypeAssert))
 	case *ssa.UnOp:
-		return interpretUnOp(element.(*ssa.UnOp))
+		return interpreter.interpretUnOp(element.(*ssa.UnOp))
 	default:
 		panic("Unexpected element")
 	}
 }
 
-func interpretPackage(element *ssa.Package) *SymbolicExpression {
-	for _, member := range element.Members {
-		Interpret(member)
+func (interpreter *Interpreter) interpretAlloc(element *ssa.Alloc) SymbolicExpression {
+	panic("TODO")
+}
+
+func (interpreter *Interpreter) interpretBinOp(element *ssa.BinOp) SymbolicExpression {
+	left := interpreter.interpret(element.X)
+	right := interpreter.interpret(element.Y)
+
+	switch element.Op.String() {
+	case "+":
+		return &BinaryOperation{Left: left, Right: right, Type: Add}
+	case "-":
+		return &BinaryOperation{Left: left, Right: right, Type: Sub}
+	case "*":
+		return &BinaryOperation{Left: left, Right: right, Type: Mul}
+	case "/":
+		return &BinaryOperation{Left: left, Right: right, Type: Div}
+	case "%":
+		return &BinaryOperation{Left: left, Right: right, Type: Mod}
+	case "&":
+		return CreateAnd(left, right)
+	case "|":
+		return CreateOr(left, right)
+	case "^":
+		return &BinaryOperation{Left: left, Right: right, Type: Xor}
+	case "<<":
+		return &BinaryOperation{Left: left, Right: right, Type: LeftShift}
+	case ">>":
+		return &BinaryOperation{Left: left, Right: right, Type: RightShift}
+	case "&^":
+		return &BinaryOperation{Left: left, Right: right, Type: AndNot}
+	case "==":
+		return &Equals{Left: left, Right: right}
+	case "!=":
+		return &Not{&Equals{Left: left, Right: right}}
+	case "<":
+		return &LT{Left: left, Right: right}
+	case "<=":
+		return &BinaryOperation{Left: &LT{Left: left, Right: right}, Right: &Equals{Left: left, Right: right}, Type: Or}
+	case ">":
+		return &GT{Left: left, Right: right}
+	case ">=":
+		return &BinaryOperation{Left: &GT{Left: left, Right: right}, Right: &Equals{Left: left, Right: right}, Type: Or}
+	default:
+		panic("unexpected binOp")
 	}
+}
+
+func (interpreter *Interpreter) interpretBuiltin(element *ssa.Builtin) SymbolicExpression {
+	panic("TODO")
+}
+
+func (interpreter *Interpreter) interpretCall(element *ssa.Call) SymbolicExpression {
+	panic("TODO")
+}
+
+func (interpreter *Interpreter) interpretChangeInterface(element *ssa.ChangeInterface) SymbolicExpression {
+	panic("TODO")
+}
+
+func (interpreter *Interpreter) interpretChangeType(element *ssa.ChangeType) SymbolicExpression {
+	panic("TODO")
+}
+
+func (interpreter *Interpreter) interpretConst(element *ssa.Const) SymbolicExpression {
+	switch element.Type().String() {
+	case "int":
+		value, _ := strconv.Atoi(element.Value.ExactString())
+		return &Literal[int]{value}
+	}
+	panic("unexpected const")
+}
+
+func (interpreter *Interpreter) interpretConvert(element *ssa.Convert) SymbolicExpression {
+	panic("TODO")
+}
+
+func (interpreter *Interpreter) interpretDebugRef(element *ssa.DebugRef) SymbolicExpression {
+	panic("TODO")
+}
+
+func (interpreter *Interpreter) interpretDefer(element *ssa.Defer) SymbolicExpression {
+	panic("TODO")
+}
+
+func (interpreter *Interpreter) interpretExtract(element *ssa.Extract) SymbolicExpression {
+	panic("TODO")
+}
+
+func (interpreter *Interpreter) interpretField(element *ssa.Field) SymbolicExpression {
+	panic("TODO")
+}
+
+func (interpreter *Interpreter) interpretFieldAddr(element *ssa.FieldAddr) SymbolicExpression {
+	panic("TODO")
+}
+
+func (interpreter *Interpreter) interpretFreeVar(element *ssa.FreeVar) SymbolicExpression {
+	panic("TODO")
+}
+
+func (interpreter *Interpreter) interpretGlobal(element *ssa.Global) SymbolicExpression {
+	panic("TODO")
+}
+
+func (interpreter *Interpreter) interpretGo(element *ssa.Go) SymbolicExpression {
+	panic("TODO")
+}
+
+func (interpreter *Interpreter) interpretIf(element *ssa.If) SymbolicExpression {
+	cond := interpreter.interpret(element.Cond)
+	successors := element.Block().Succs
+	enterBranch(*interpreter, cond, successors[0])
+	if len(successors) == 1 {
+		return nil
+	}
+	notCond := &Not{cond}
+	enterBranch(*interpreter, notCond, successors[1])
 	return nil
 }
 
-func interpretAlloc(element *ssa.Alloc) *SymbolicExpression {
+func (interpreter *Interpreter) interpretIndex(element *ssa.Index) SymbolicExpression {
 	panic("TODO")
 }
 
-func interpretBinOp(element *ssa.BinOp) *SymbolicExpression {
+func (interpreter *Interpreter) interpretIndexAddr(element *ssa.IndexAddr) SymbolicExpression {
 	panic("TODO")
 }
 
-func interpretBuiltin(element *ssa.Builtin) *SymbolicExpression {
+func (interpreter *Interpreter) interpretJump(element *ssa.Jump) SymbolicExpression {
 	panic("TODO")
 }
 
-func interpretCall(element *ssa.Call) *SymbolicExpression {
+func (interpreter *Interpreter) interpretLookup(element *ssa.Lookup) SymbolicExpression {
 	panic("TODO")
 }
 
-func interpretChangeInterface(element *ssa.ChangeInterface) *SymbolicExpression {
+func (interpreter *Interpreter) interpretMakeChan(element *ssa.MakeChan) SymbolicExpression {
 	panic("TODO")
 }
 
-func interpretChangeType(element *ssa.ChangeType) *SymbolicExpression {
+func (interpreter *Interpreter) interpretMakeClosure(element *ssa.MakeClosure) SymbolicExpression {
 	panic("TODO")
 }
 
-func interpretConst(element *ssa.Const) *SymbolicExpression {
+func (interpreter *Interpreter) interpretMakeInterface(element *ssa.MakeInterface) SymbolicExpression {
 	panic("TODO")
 }
 
-func interpretConvert(element *ssa.Convert) *SymbolicExpression {
+func (interpreter *Interpreter) interpretMakeMap(element *ssa.MakeMap) SymbolicExpression {
 	panic("TODO")
 }
 
-func interpretDebugRef(element *ssa.DebugRef) *SymbolicExpression {
+func (interpreter *Interpreter) interpretMakeSlice(element *ssa.MakeSlice) SymbolicExpression {
 	panic("TODO")
 }
 
-func interpretDefer(element *ssa.Defer) *SymbolicExpression {
+func (interpreter *Interpreter) interpretMapUpdate(element *ssa.MapUpdate) SymbolicExpression {
 	panic("TODO")
 }
 
-func interpretExtract(element *ssa.Extract) *SymbolicExpression {
+func (interpreter *Interpreter) interpretMultiConvert(element *ssa.MultiConvert) SymbolicExpression {
 	panic("TODO")
 }
 
-func interpretField(element *ssa.Field) *SymbolicExpression {
+func (interpreter *Interpreter) interpretNamedConst(element *ssa.NamedConst) SymbolicExpression {
 	panic("TODO")
 }
 
-func interpretFieldAddr(element *ssa.FieldAddr) *SymbolicExpression {
+func (interpreter *Interpreter) interpretNext(element *ssa.Next) SymbolicExpression {
 	panic("TODO")
 }
 
-func interpretFreeVar(element *ssa.FreeVar) *SymbolicExpression {
+func (interpreter *Interpreter) interpretPanic(element *ssa.Panic) SymbolicExpression {
 	panic("TODO")
 }
 
-func interpretFunction(element *ssa.Function) *SymbolicExpression {
+func (interpreter *Interpreter) interpretParameter(element *ssa.Parameter) SymbolicExpression {
+	return &InputValue{Name: element.Name(), Type: element.Type().String()}
+}
+
+func (interpreter *Interpreter) interpretPhi(element *ssa.Phi) SymbolicExpression {
 	panic("TODO")
 }
 
-func interpretGlobal(element *ssa.Global) *SymbolicExpression {
+func (interpreter *Interpreter) interpretRange(element *ssa.Range) SymbolicExpression {
 	panic("TODO")
 }
 
-func interpretGo(element *ssa.Go) *SymbolicExpression {
+func (interpreter *Interpreter) interpretReturn(element *ssa.Return) SymbolicExpression {
+	returnExpr := interpreter.interpret(element.Results[0])
+	interpreter.ReturnValue.Options[interpreter.PathCondition] = returnExpr
+	return nil
+}
+
+func (interpreter *Interpreter) interpretRunDefers(element *ssa.RunDefers) SymbolicExpression {
 	panic("TODO")
 }
 
-func interpretIf(element *ssa.If) *SymbolicExpression {
+func (interpreter *Interpreter) interpretSelect(element *ssa.Select) SymbolicExpression {
 	panic("TODO")
 }
 
-func interpretIndex(element *ssa.Index) *SymbolicExpression {
+func (interpreter *Interpreter) interpretSend(element *ssa.Send) SymbolicExpression {
 	panic("TODO")
 }
 
-func interpretIndexAddr(element *ssa.IndexAddr) *SymbolicExpression {
+func (interpreter *Interpreter) interpretSlice(element *ssa.Slice) SymbolicExpression {
 	panic("TODO")
 }
 
-func interpretJump(element *ssa.Jump) *SymbolicExpression {
+func (interpreter *Interpreter) interpretSliceToArrayPointer(element *ssa.SliceToArrayPointer) SymbolicExpression {
 	panic("TODO")
 }
 
-func interpretLookup(element *ssa.Lookup) *SymbolicExpression {
+func (interpreter *Interpreter) interpretStore(element *ssa.Store) SymbolicExpression {
 	panic("TODO")
 }
 
-func interpretMakeChan(element *ssa.MakeChan) *SymbolicExpression {
+func (interpreter *Interpreter) interpretType(element *ssa.Type) SymbolicExpression {
 	panic("TODO")
 }
 
-func interpretMakeClosure(element *ssa.MakeClosure) *SymbolicExpression {
+func (interpreter *Interpreter) interpretTypeAssert(element *ssa.TypeAssert) SymbolicExpression {
 	panic("TODO")
 }
 
-func interpretMakeInterface(element *ssa.MakeInterface) *SymbolicExpression {
+func (interpreter *Interpreter) interpretUnOp(element *ssa.UnOp) SymbolicExpression {
 	panic("TODO")
 }
 
-func interpretMakeMap(element *ssa.MakeMap) *SymbolicExpression {
-	panic("TODO")
-}
-
-func interpretMakeSlice(element *ssa.MakeSlice) *SymbolicExpression {
-	panic("TODO")
-}
-
-func interpretMapUpdate(element *ssa.MapUpdate) *SymbolicExpression {
-	panic("TODO")
-}
-
-func interpretMultiConvert(element *ssa.MultiConvert) *SymbolicExpression {
-	panic("TODO")
-}
-
-func interpretNamedConst(element *ssa.NamedConst) *SymbolicExpression {
-	panic("TODO")
-}
-
-func interpretNext(element *ssa.Next) *SymbolicExpression {
-	panic("TODO")
-}
-
-func interpretPanic(element *ssa.Panic) *SymbolicExpression {
-	panic("TODO")
-}
-
-func interpretParameter(element *ssa.Parameter) *SymbolicExpression {
-	panic("TODO")
-}
-
-func interpretPhi(element *ssa.Phi) *SymbolicExpression {
-	panic("TODO")
-}
-
-func interpretRange(element *ssa.Range) *SymbolicExpression {
-	panic("TODO")
-}
-
-func interpretReturn(element *ssa.Return) *SymbolicExpression {
-	panic("TODO")
-}
-
-func interpretRunDefers(element *ssa.RunDefers) *SymbolicExpression {
-	panic("TODO")
-}
-
-func interpretSelect(element *ssa.Select) *SymbolicExpression {
-	panic("TODO")
-}
-
-func interpretSend(element *ssa.Send) *SymbolicExpression {
-	panic("TODO")
-}
-
-func interpretSlice(element *ssa.Slice) *SymbolicExpression {
-	panic("TODO")
-}
-
-func interpretSliceToArrayPointer(element *ssa.SliceToArrayPointer) *SymbolicExpression {
-	panic("TODO")
-}
-
-func interpretStore(element *ssa.Store) *SymbolicExpression {
-	panic("TODO")
-}
-
-func interpretType(element *ssa.Type) *SymbolicExpression {
-	panic("TODO")
-}
-
-func interpretTypeAssert(element *ssa.TypeAssert) *SymbolicExpression {
-	panic("TODO")
-}
-
-func interpretUnOp(element *ssa.UnOp) *SymbolicExpression {
-	panic("TODO")
+func enterBranch(interpreter Interpreter, condition SymbolicExpression, body *ssa.BasicBlock) SymbolicExpression {
+	interpreter.PathCondition = CreateAnd(interpreter.PathCondition, condition)
+	for _, instr := range body.Instrs {
+		interpreter.interpret(instr)
+	}
+	return &interpreter.ReturnValue
 }
