@@ -22,33 +22,42 @@ func TestCompareAndIncrement(t *testing.T) {
 	assumption1Ast := smtBuilder.BuildSmt(assumption1)[0].(z3.Bool).AsAST()
 	assumption2Ast := smtBuilder.BuildSmt(assumption2)[0].(z3.Bool).AsAST()
 
-	sat := solver.SmtSolver.CheckAssumptions([]z3.AST{
+	assumptions := []z3.AST{
 		assumption1Ast,
 		assumption2Ast,
-	})
+	}
+
+	sat := solver.SmtSolver.CheckAssumptions(assumptions)
 
 	if sat {
 		t.Fatal("FALSE SAT")
 	}
 
 	unsatCore := solver.SmtSolver.UnsatCore()
-	t.Log(unsatCore)
+	newAssumptions := []z3.AST{}
 
-	sat = solver.SmtSolver.CheckAssumptions([]z3.AST{
-		assumption1Ast,
-	})
+Outer:
+	for _, assumption := range assumptions {
+		stringAssumption := assumption.String()
+		for _, unsat := range unsatCore {
+			if stringAssumption == unsat.String() {
+				continue Outer
+			}
+		}
+		newAssumptions = append(newAssumptions, assumption)
+	}
+
+	t.Log(newAssumptions)
+
+	if len(newAssumptions) > 0 {
+		sat = solver.SmtSolver.CheckAssumptions(newAssumptions)
+	} else {
+		sat, _ = solver.SmtSolver.Check()
+	}
 
 	if !sat {
 		t.Fatal("FALSE UNSAT")
 	}
-	t.Log(solver.SmtSolver.Model())
 
-	sat = solver.SmtSolver.CheckAssumptions([]z3.AST{
-		assumption2Ast,
-	})
-
-	if !sat {
-		t.Fatal("FALSE UNSAT")
-	}
 	t.Log(solver.SmtSolver.Model())
 }
