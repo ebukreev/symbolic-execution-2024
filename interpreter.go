@@ -7,16 +7,19 @@ import (
 
 type Interpreter struct {
 	PathCondition SymbolicExpression
+	Memory        map[string]*Conditional
 	ReturnValue   Conditional
+	BlocksStack   []*ssa.BasicBlock
 }
 
 func Interpret(function *ssa.Function) Conditional {
 	interpreter := Interpreter{PathCondition: &Literal[bool]{true},
-		ReturnValue: Conditional{make(map[SymbolicExpression]SymbolicExpression)}}
-
-	for _, instruction := range function.Blocks[0].Instrs {
-		interpreter.interpret(instruction)
+		Memory:      map[string]*Conditional{},
+		ReturnValue: Conditional{make(map[SymbolicExpression]SymbolicExpression)},
+		BlocksStack: []*ssa.BasicBlock{},
 	}
+
+	interpreter.interpret(function.Blocks[0])
 
 	return interpreter.ReturnValue
 }
@@ -111,6 +114,8 @@ func (interpreter *Interpreter) interpret(element interface{}) SymbolicExpressio
 		return interpreter.interpretTypeAssert(element.(*ssa.TypeAssert))
 	case *ssa.UnOp:
 		return interpreter.interpretUnOp(element.(*ssa.UnOp))
+	case *ssa.BasicBlock:
+		return interpreter.interpretBasicBlock(element.(*ssa.BasicBlock))
 	default:
 		panic("Unexpected element")
 	}
@@ -185,12 +190,18 @@ func (interpreter *Interpreter) interpretConst(element *ssa.Const) SymbolicExpre
 	case "int":
 		value, _ := strconv.Atoi(element.Value.ExactString())
 		return &Literal[int]{value}
+	case "uint":
+		value, _ := strconv.ParseUint(element.Value.ExactString(), 10, 64)
+		return &Literal[uint]{uint(value)}
+	case "float64":
+		value, _ := strconv.ParseFloat(element.Value.ExactString(), 64)
+		return &Literal[float64]{value}
 	}
 	panic("unexpected const")
 }
 
 func (interpreter *Interpreter) interpretConvert(element *ssa.Convert) SymbolicExpression {
-	panic("TODO")
+	return &Cast{interpreter.interpret(element.X), element.Type().String()}
 }
 
 func (interpreter *Interpreter) interpretDebugRef(element *ssa.DebugRef) SymbolicExpression {
@@ -246,7 +257,7 @@ func (interpreter *Interpreter) interpretIndexAddr(element *ssa.IndexAddr) Symbo
 }
 
 func (interpreter *Interpreter) interpretJump(element *ssa.Jump) SymbolicExpression {
-	panic("TODO")
+	return interpreter.interpret(element.Block().Succs[0])
 }
 
 func (interpreter *Interpreter) interpretLookup(element *ssa.Lookup) SymbolicExpression {
@@ -298,7 +309,24 @@ func (interpreter *Interpreter) interpretParameter(element *ssa.Parameter) Symbo
 }
 
 func (interpreter *Interpreter) interpretPhi(element *ssa.Phi) SymbolicExpression {
-	panic("TODO")
+	for i, pred := range element.Block().Preds {
+		for j := len(interpreter.BlocksStack) - 2; j >= 0; j-- {
+			if pred == interpreter.BlocksStack[j] {
+				elementValue, ok := interpreter.Memory[element.Comment]
+				edgeValue := interpreter.interpret(element.Edges[i])
+				if ok {
+					elementValue.Options[interpreter.PathCondition] = edgeValue
+				} else {
+					options := map[SymbolicExpression]SymbolicExpression{}
+					options[interpreter.PathCondition] = edgeValue
+					interpreter.Memory[element.Comment] = &Conditional{options}
+				}
+				return edgeValue
+			}
+		}
+	}
+
+	panic("unexpected state")
 }
 
 func (interpreter *Interpreter) interpretRange(element *ssa.Range) SymbolicExpression {
@@ -347,10 +375,17 @@ func (interpreter *Interpreter) interpretUnOp(element *ssa.UnOp) SymbolicExpress
 	panic("TODO")
 }
 
-func enterBranch(interpreter Interpreter, condition SymbolicExpression, body *ssa.BasicBlock) SymbolicExpression {
-	interpreter.PathCondition = CreateAnd(interpreter.PathCondition, condition)
-	for _, instr := range body.Instrs {
+func (interpreter *Interpreter) interpretBasicBlock(element *ssa.BasicBlock) SymbolicExpression {
+	interpreter.BlocksStack = append(interpreter.BlocksStack, element)
+	for _, instr := range element.Instrs {
 		interpreter.interpret(instr)
 	}
+	interpreter.BlocksStack = interpreter.BlocksStack[:len(interpreter.BlocksStack)-1]
+	return nil
+}
+
+func enterBranch(interpreter Interpreter, condition SymbolicExpression, body *ssa.BasicBlock) SymbolicExpression {
+	interpreter.PathCondition = CreateAnd(interpreter.PathCondition, condition)
+	interpreter.interpret(body)
 	return &interpreter.ReturnValue
 }

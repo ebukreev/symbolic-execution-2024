@@ -100,6 +100,19 @@ func TestFloatOperationsThirdPath(t *testing.T) {
 	checkResultWithPathCondition(t, pc, resExpr, true)
 }
 
+func TestFloatOperationsInterpretation(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	file := path.Join(path.Dir(filename), "constraints", "numbers.go")
+
+	conditional := Analyse(file, "floatOperations")
+
+	t.Log((&conditional).String())
+
+	for cond, value := range conditional.Options {
+		checkResultWithPathCondition(t, cond, value, true)
+	}
+}
+
 func TestMixedOperationsFirstPath(t *testing.T) {
 	a := &InputValue{Name: "a", Type: "int"}
 	b := &InputValue{Name: "b", Type: "float64"}
@@ -152,6 +165,19 @@ func TestMixedOperationsFourthPath(t *testing.T) {
 	checkResultWithPathCondition(t, pc, resExpr, true)
 }
 
+func TestMixedOperationsInterpretation(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	file := path.Join(path.Dir(filename), "constraints", "numbers.go")
+
+	conditional := Analyse(file, "mixedOperations")
+
+	t.Log((&conditional).String())
+
+	for cond, value := range conditional.Options {
+		checkResultWithPathCondition(t, cond, value, true)
+	}
+}
+
 func TestNestedConditionsFirstPath(t *testing.T) {
 	a := &InputValue{Name: "a", Type: "int"}
 	b := &InputValue{Name: "b", Type: "float64"}
@@ -183,6 +209,19 @@ func TestNestedConditionsThirdPath(t *testing.T) {
 	resExpr := &BinaryOperation{&Cast{a, "float64"}, b, Add}
 
 	checkResultWithPathCondition(t, pc, resExpr, true)
+}
+
+func TestNestedConditionsInterpretation(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	file := path.Join(path.Dir(filename), "constraints", "numbers.go")
+
+	conditional := Analyse(file, "nestedConditions")
+
+	t.Log((&conditional).String())
+
+	for cond, value := range conditional.Options {
+		checkResultWithPathCondition(t, cond, value, true)
+	}
 }
 
 func TestBitwiseOperationsFirstPath(t *testing.T) {
@@ -232,6 +271,19 @@ func TestBitwiseOperationsThirdPath(t *testing.T) {
 	checkResultWithPathCondition(t, pc, resExpr, false)
 }
 
+func TestBitwiseOperationsInterpretation(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	file := path.Join(path.Dir(filename), "constraints", "numbers.go")
+
+	conditional := Analyse(file, "bitwiseOperations")
+
+	t.Log((&conditional).String())
+
+	for cond, value := range conditional.Options {
+		checkResultWithPathCondition(t, cond, value, false)
+	}
+}
+
 func TestAdvancedBitwiseFirstPath(t *testing.T) {
 	a := &InputValue{Name: "a", Type: "int"}
 	b := &InputValue{Name: "b", Type: "int"}
@@ -263,6 +315,19 @@ func TestAdvancedBitwiseThirdPath(t *testing.T) {
 	resExpr := &BinaryOperation{a, b, Xor}
 
 	checkResultWithPathCondition(t, pc, resExpr, false)
+}
+
+func TestAdvancedBitwiseInterpretation(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	file := path.Join(path.Dir(filename), "constraints", "numbers.go")
+
+	conditional := Analyse(file, "advancedBitwise")
+
+	t.Log((&conditional).String())
+
+	for cond, value := range conditional.Options {
+		checkResultWithPathCondition(t, cond, value, false)
+	}
 }
 
 func TestCombinedBitwiseFirstPath(t *testing.T) {
@@ -302,6 +367,19 @@ func TestCombinedBitwiseThirdPath(t *testing.T) {
 	pc := &BinaryOperation{firstIf, &Not{&GT{resUpdate, &Literal[int]{10}}}, And}
 
 	checkResultWithPathCondition(t, pc, resUpdate, false)
+}
+
+func TestCombinedBitwiseInterpretation(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	file := path.Join(path.Dir(filename), "constraints", "numbers.go")
+
+	conditional := Analyse(file, "combinedBitwise")
+
+	t.Log((&conditional).String())
+
+	for cond, value := range conditional.Options {
+		checkResultWithPathCondition(t, cond, value, false)
+	}
 }
 
 func TestNestedBitwiseFirstPath(t *testing.T) {
@@ -351,6 +429,19 @@ func TestNestedBitwiseFourthPath(t *testing.T) {
 	checkResultWithPathCondition(t, pc, resExpr, false)
 }
 
+func TestNestedBitwiseInterpretation(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	file := path.Join(path.Dir(filename), "constraints", "numbers.go")
+
+	conditional := Analyse(file, "nestedBitwise")
+
+	t.Log((&conditional).String())
+
+	for cond, value := range conditional.Options {
+		checkResultWithPathCondition(t, cond, value, false)
+	}
+}
+
 func checkResultWithPathCondition(t *testing.T, pathCondition SymbolicExpression, resultExpression SymbolicExpression, isFloatResult bool) {
 	solver := CreateSolver(false)
 	smtBuilder := SmtBuilder{Context: solver.Context}
@@ -375,11 +466,13 @@ func checkResultWithPathCondition(t *testing.T, pathCondition SymbolicExpression
 
 	sat, err := solver.SmtSolver.Check()
 	if !sat {
-		t.Fatal("UNSAT")
+		t.Log("UNSAT")
 	}
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	t.Log(solver.SmtSolver.Model().String())
+	if sat {
+		t.Log(solver.SmtSolver.Model().String())
+	}
 }

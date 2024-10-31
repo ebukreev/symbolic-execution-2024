@@ -277,6 +277,19 @@ func (sb *SmtBuilder) BuildSmt(expression SymbolicExpression) []z3.Value {
 		array := sb.BuildSmt(expression.(*ArrayAccess).Array)[0]
 		index := sb.BuildSmt(expression.(*ArrayAccess).Index)[0]
 		return []z3.Value{array.(z3.Array).Select(index)}
+
+	case *Conditional:
+		var result z3.Value
+		for key, value := range expression.(*Conditional).Options {
+			cond := sb.BuildSmt(key)[0].(z3.Bool)
+			expr := sb.BuildSmt(value)[0]
+			if result == nil {
+				result = cond.IfThenElse(expr, z3.Uninterpreted{})
+			} else {
+				result = cond.IfThenElse(expr, result)
+			}
+		}
+		return []z3.Value{result}
 	}
 	panic("unexpected expression")
 }
