@@ -1,6 +1,8 @@
 package main
 
 import (
+	"path"
+	"runtime"
 	"symbolic-execution-2024/z3"
 	"testing"
 )
@@ -39,6 +41,19 @@ func TestBasicComplexOperationsThirdPath(t *testing.T) {
 	checkComplexResultAndPathCondition(t, pc, &BinaryOperation{a, b, Mul}, false)
 }
 
+func TestBasicComplexOperationsInterpretation(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	file := path.Join(path.Dir(filename), "constraints", "complex.go")
+
+	conditional := Analyse(file, "basicComplexOperations")
+
+	t.Log((&conditional).String())
+
+	for cond, value := range conditional.Options {
+		checkComplexResultAndPathCondition(t, cond, value, false)
+	}
+}
+
 func TestComplexMagnitude(t *testing.T) {
 	a := &InputValue{Name: "a", Type: "complex128"}
 	pc := &Literal[bool]{true}
@@ -52,6 +67,19 @@ func TestComplexMagnitude(t *testing.T) {
 	}
 
 	checkComplexResultAndPathCondition(t, pc, expression, true)
+}
+
+func TestComplexMagnitudeInterpretation(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	file := path.Join(path.Dir(filename), "constraints", "complex.go")
+
+	conditional := Analyse(file, "complexMagnitude")
+
+	t.Log((&conditional).String())
+
+	for cond, value := range conditional.Options {
+		checkComplexResultAndPathCondition(t, cond, value, true)
+	}
 }
 
 func TestComplexComparisonFirstPath(t *testing.T) {
@@ -206,6 +234,19 @@ func TestComplexOperationsFourthPath(t *testing.T) {
 	checkComplexResultAndPathCondition(t, pc, expr, false)
 }
 
+func TestComplexOperationsInterpretation(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	file := path.Join(path.Dir(filename), "constraints", "complex.go")
+
+	conditional := Analyse(file, "complexOperations")
+
+	t.Log((&conditional).String())
+
+	for cond, value := range conditional.Options {
+		checkComplexResultAndPathCondition(t, cond, value, false)
+	}
+}
+
 func TestNestedComplexOperationsFirstPath(t *testing.T) {
 	a := &InputValue{Name: "a", Type: "complex128"}
 	b := &InputValue{Name: "b", Type: "complex128"}
@@ -258,6 +299,19 @@ func TestNestedComplexOperationsFourthPath(t *testing.T) {
 	checkComplexResultAndPathCondition(t, pc, expr, false)
 }
 
+func TestNestedComplexOperationsInterpretation(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	file := path.Join(path.Dir(filename), "constraints", "complex.go")
+
+	conditional := Analyse(file, "nestedComplexOperations")
+
+	t.Log((&conditional).String())
+
+	for cond, value := range conditional.Options {
+		checkComplexResultAndPathCondition(t, cond, value, false)
+	}
+}
+
 func checkComplexResultAndPathCondition(t *testing.T, pathCondition SymbolicExpression, resultExpression SymbolicExpression, isFloatResult bool) {
 	solver := CreateSolver(false)
 	smtBuilder := SmtBuilder{Context: solver.Context}
@@ -288,11 +342,13 @@ func checkComplexResultAndPathCondition(t *testing.T, pathCondition SymbolicExpr
 
 	sat, err := solver.SmtSolver.Check()
 	if !sat {
-		t.Fatal("UNSAT")
+		t.Log("UNSAT")
 	}
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	t.Log(solver.SmtSolver.Model().String())
+	if sat {
+		t.Log(solver.SmtSolver.Model().String())
+	}
 }

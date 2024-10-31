@@ -3,6 +3,7 @@ package main
 import (
 	"golang.org/x/tools/go/ssa"
 	"strconv"
+	"strings"
 )
 
 type Interpreter struct {
@@ -174,7 +175,24 @@ func (interpreter *Interpreter) interpretBuiltin(element *ssa.Builtin) SymbolicE
 }
 
 func (interpreter *Interpreter) interpretCall(element *ssa.Call) SymbolicExpression {
-	panic("TODO")
+	signature := strings.ReplaceAll(element.Call.Value.String(), " ", "_") + "("
+	var argValues []SymbolicExpression
+
+	for _, arg := range element.Call.Args {
+		argValues = append(argValues, interpreter.interpret(arg))
+		argType := arg.Type().String()
+		if argType == "complex128" {
+			signature += "ComplexType,"
+		} else {
+			signature += argType + ","
+		}
+	}
+	if signature[len(signature)-1] == ',' {
+		signature = signature[:len(signature)-1]
+	}
+	signature = signature + ")"
+
+	return &FunctionCall{Signature: signature, Arguments: argValues}
 }
 
 func (interpreter *Interpreter) interpretChangeInterface(element *ssa.ChangeInterface) SymbolicExpression {
