@@ -1,6 +1,7 @@
 package main
 
 import (
+	"go/types"
 	"golang.org/x/tools/go/ssa"
 	"strconv"
 	"strings"
@@ -183,6 +184,8 @@ func (interpreter *Interpreter) interpretCall(element *ssa.Call) SymbolicExpress
 		argType := arg.Type().String()
 		if argType == "complex128" {
 			signature += "ComplexType,"
+		} else if strings.HasPrefix(signature, "builtin_len") {
+			signature += "Type,"
 		} else {
 			signature += argType + ","
 		}
@@ -239,7 +242,9 @@ func (interpreter *Interpreter) interpretField(element *ssa.Field) SymbolicExpre
 }
 
 func (interpreter *Interpreter) interpretFieldAddr(element *ssa.FieldAddr) SymbolicExpression {
-	panic("TODO")
+	receiver := interpreter.interpret(element.X)
+	typeSignature := getTypeSignature(element.X.Type())
+	return &FunctionCall{typeSignature + "_" + strconv.Itoa(element.Field), []SymbolicExpression{receiver}}
 }
 
 func (interpreter *Interpreter) interpretFreeVar(element *ssa.FreeVar) SymbolicExpression {
@@ -271,7 +276,9 @@ func (interpreter *Interpreter) interpretIndex(element *ssa.Index) SymbolicExpre
 }
 
 func (interpreter *Interpreter) interpretIndexAddr(element *ssa.IndexAddr) SymbolicExpression {
-	panic("TODO")
+	array := interpreter.interpret(element.X)
+	index := interpreter.interpret(element.Index)
+	return &ArrayAccess{array, index}
 }
 
 func (interpreter *Interpreter) interpretJump(element *ssa.Jump) SymbolicExpression {
@@ -390,6 +397,11 @@ func (interpreter *Interpreter) interpretTypeAssert(element *ssa.TypeAssert) Sym
 }
 
 func (interpreter *Interpreter) interpretUnOp(element *ssa.UnOp) SymbolicExpression {
+	operand := interpreter.interpret(element.X)
+	switch element.Op.String() {
+	case "*":
+		return operand
+	}
 	panic("TODO")
 }
 
@@ -406,4 +418,27 @@ func enterBranch(interpreter Interpreter, condition SymbolicExpression, body *ss
 	interpreter.PathCondition = CreateAnd(interpreter.PathCondition, condition)
 	interpreter.interpret(body)
 	return &interpreter.ReturnValue
+}
+
+func getTypeSignature(tpe types.Type) string {
+	pointer, ok := tpe.(*types.Pointer)
+	if ok {
+		return getTypeSignature(pointer.Elem())
+	}
+	named, ok := tpe.(*types.Named)
+	if ok {
+		return getTypeSignature(named.Underlying())
+	}
+	structure, ok := tpe.(*types.Struct)
+	if ok {
+		signature := "{"
+		for i := 0; i < structure.NumFields(); i++ {
+			signature += structure.Field(i).Type().String() + ","
+		}
+		if signature[len(signature)-1] == ',' {
+			return signature[:len(signature)-1] + "}"
+		}
+		return signature + "}"
+	}
+	panic("TODO")
 }

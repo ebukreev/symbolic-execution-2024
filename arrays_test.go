@@ -1,6 +1,8 @@
 package main
 
 import (
+	"path"
+	"runtime"
 	"testing"
 )
 
@@ -81,6 +83,19 @@ func TestCompareElementFourthPath(t *testing.T) {
 		&Not{&LT{element, value}}, And}
 
 	checkResultWithPathCondition(t, newPc, &Literal[int]{0}, false)
+}
+
+func TestCompareElementInterpretation(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	file := path.Join(path.Dir(filename), "constraints", "arrays.go")
+
+	conditional := Analyse(file, "compareElement")
+
+	t.Log((&conditional).String())
+
+	for cond, value := range conditional.Options {
+		checkResultWithPathCondition(t, cond, value, false)
+	}
 }
 
 func TestCompareAgeFirstPath(t *testing.T) {
@@ -172,4 +187,17 @@ func TestCompareAgeFourthPath(t *testing.T) {
 	expression := &Literal[int]{0}
 
 	checkResultWithPathCondition(t, pc, expression, false)
+}
+
+func TestCompareAgeInterpretation(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	file := path.Join(path.Dir(filename), "constraints", "arrays.go")
+
+	conditional := Analyse(file, "compareAge")
+
+	t.Log((&conditional).String())
+
+	for cond, value := range conditional.Options {
+		checkResultWithPathCondition(t, cond, value, false)
+	}
 }
