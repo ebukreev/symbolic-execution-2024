@@ -45,7 +45,7 @@ func TestBasicComplexOperationsInterpretation(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	file := path.Join(path.Dir(filename), "constraints", "complex.go")
 
-	conditional := Analyse(file, "basicComplexOperations")
+	conditional := AnalyseStatically(file, "basicComplexOperations")
 
 	t.Log((&conditional).String())
 
@@ -73,7 +73,7 @@ func TestComplexMagnitudeInterpretation(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	file := path.Join(path.Dir(filename), "constraints", "complex.go")
 
-	conditional := Analyse(file, "complexMagnitude")
+	conditional := AnalyseStatically(file, "complexMagnitude")
 
 	t.Log((&conditional).String())
 
@@ -238,7 +238,7 @@ func TestComplexOperationsInterpretation(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	file := path.Join(path.Dir(filename), "constraints", "complex.go")
 
-	conditional := Analyse(file, "complexOperations")
+	conditional := AnalyseStatically(file, "complexOperations")
 
 	t.Log((&conditional).String())
 
@@ -303,7 +303,7 @@ func TestNestedComplexOperationsInterpretation(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	file := path.Join(path.Dir(filename), "constraints", "complex.go")
 
-	conditional := Analyse(file, "nestedComplexOperations")
+	conditional := AnalyseStatically(file, "nestedComplexOperations")
 
 	t.Log((&conditional).String())
 

@@ -89,7 +89,7 @@ func TestCompareElementInterpretation(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	file := path.Join(path.Dir(filename), "constraints", "arrays.go")
 
-	conditional := Analyse(file, "compareElement")
+	conditional := AnalyseStatically(file, "compareElement")
 
 	t.Log((&conditional).String())
 
@@ -193,7 +193,7 @@ func TestCompareAgeInterpretation(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	file := path.Join(path.Dir(filename), "constraints", "arrays.go")
 
-	conditional := Analyse(file, "compareAge")
+	conditional := AnalyseStatically(file, "compareAge")
 
 	t.Log((&conditional).String())
 

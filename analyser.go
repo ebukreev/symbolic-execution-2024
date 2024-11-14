@@ -12,18 +12,53 @@ import (
 )
 
 func main() {
-	Analyse("some-file")
+	AnalyseDynamically("some-file", "some-name")
 }
 
-func Analyse(file string, functionName string) Conditional {
+func AnalyseStatically(file string, functionName string) Conditional {
 	cfg := BuildCfg(file)
 	for _, member := range cfg.Members {
 		function, ok := member.(*ssa.Function)
 		if ok && function != nil && function.Name() == functionName {
-			return Interpret(function)
+			return InterpretStatically(function)
 		}
 	}
 	return Conditional{}
+}
+
+type Analyser struct {
+	StatesQueue PriorityQueue
+	Results     []DynamicInterpreter
+}
+
+func AnalyseDynamically(file string, functionName string) []DynamicInterpreter {
+	analyser := Analyser{make(PriorityQueue, 0), make([]DynamicInterpreter, 0)}
+	cfg := BuildCfg(file)
+	for _, member := range cfg.Members {
+		function, ok := member.(*ssa.Function)
+		if ok && function != nil && function.Name() == functionName {
+			interpreter := DynamicInterpreter{
+				PathCondition:   &Literal[bool]{true},
+				Memory:          map[string]*SymbolicExpression{},
+				BlocksStack:     []*ssa.BasicBlock{},
+				NextInstruction: function,
+			}
+			analyser.StatesQueue.Push(&Item{value: interpreter, priority: 1})
+			for analyser.StatesQueue.Len() != 0 {
+				interpretationResults := InterpretDynamically(analyser.StatesQueue.Pop().(*Item).value)
+				for _, interpretationResult := range interpretationResults {
+					if interpretationResult.NextInstruction == nil {
+						analyser.Results = append(analyser.Results, interpretationResult)
+					} else {
+						// TODO calculate priority
+						analyser.StatesQueue.Push(&Item{value: interpretationResult, priority: 1})
+					}
+				}
+			}
+			break
+		}
+	}
+	return analyser.Results
 }
 
 func BuildCfg(file string) *ssa.Package {

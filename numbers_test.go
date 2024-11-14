@@ -53,12 +53,25 @@ func TestIntegerOperationsInterpretation(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	file := path.Join(path.Dir(filename), "constraints", "numbers.go")
 
-	conditional := Analyse(file, "integerOperations")
+	conditional := AnalyseStatically(file, "integerOperations")
 
 	t.Log((&conditional).String())
 
 	for cond, value := range conditional.Options {
 		checkResultWithPathCondition(t, cond, value, false)
+	}
+}
+
+func TestIntegerOperationsDynamicInterpretation(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	file := path.Join(path.Dir(filename), "constraints", "numbers.go")
+
+	result := AnalyseDynamically(file, "integerOperations")
+
+	t.Log(result)
+
+	for _, interpreter := range result {
+		checkResultWithPathCondition(t, interpreter.PathCondition, interpreter.ReturnValue, false)
 	}
 }
 
@@ -104,7 +117,7 @@ func TestFloatOperationsInterpretation(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	file := path.Join(path.Dir(filename), "constraints", "numbers.go")
 
-	conditional := Analyse(file, "floatOperations")
+	conditional := AnalyseStatically(file, "floatOperations")
 
 	t.Log((&conditional).String())
 
@@ -169,7 +182,7 @@ func TestMixedOperationsInterpretation(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	file := path.Join(path.Dir(filename), "constraints", "numbers.go")
 
-	conditional := Analyse(file, "mixedOperations")
+	conditional := AnalyseStatically(file, "mixedOperations")
 
 	t.Log((&conditional).String())
 
@@ -215,7 +228,7 @@ func TestNestedConditionsInterpretation(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	file := path.Join(path.Dir(filename), "constraints", "numbers.go")
 
-	conditional := Analyse(file, "nestedConditions")
+	conditional := AnalyseStatically(file, "nestedConditions")
 
 	t.Log((&conditional).String())
 
@@ -275,7 +288,7 @@ func TestBitwiseOperationsInterpretation(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	file := path.Join(path.Dir(filename), "constraints", "numbers.go")
 
-	conditional := Analyse(file, "bitwiseOperations")
+	conditional := AnalyseStatically(file, "bitwiseOperations")
 
 	t.Log((&conditional).String())
 
@@ -321,7 +334,7 @@ func TestAdvancedBitwiseInterpretation(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	file := path.Join(path.Dir(filename), "constraints", "numbers.go")
 
-	conditional := Analyse(file, "advancedBitwise")
+	conditional := AnalyseStatically(file, "advancedBitwise")
 
 	t.Log((&conditional).String())
 
@@ -373,7 +386,7 @@ func TestCombinedBitwiseInterpretation(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	file := path.Join(path.Dir(filename), "constraints", "numbers.go")
 
-	conditional := Analyse(file, "combinedBitwise")
+	conditional := AnalyseStatically(file, "combinedBitwise")
 
 	t.Log((&conditional).String())
 
@@ -433,7 +446,7 @@ func TestNestedBitwiseInterpretation(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	file := path.Join(path.Dir(filename), "constraints", "numbers.go")
 
-	conditional := Analyse(file, "nestedBitwise")
+	conditional := AnalyseStatically(file, "nestedBitwise")
 
 	t.Log((&conditional).String())
 
