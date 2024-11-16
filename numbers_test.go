@@ -66,12 +66,11 @@ func TestIntegerOperationsDynamicInterpretation(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	file := path.Join(path.Dir(filename), "constraints", "numbers.go")
 
-	result := AnalyseDynamically(file, "integerOperations")
+	results := AnalyseDynamically(file, "integerOperations")
 
-	t.Log(result)
-
-	for _, interpreter := range result {
-		checkResultWithPathCondition(t, interpreter.PathCondition, interpreter.ReturnValue, false)
+	for _, result := range results {
+		t.Log(result.PathCondition.String() + " => " + result.ReturnValue.String())
+		checkResultWithPathCondition(t, result.PathCondition, result.ReturnValue, false)
 	}
 }
 

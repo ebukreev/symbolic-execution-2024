@@ -1,35 +1,53 @@
 package main
 
-import "golang.org/x/tools/go/ssa"
+import (
+	"golang.org/x/tools/go/ssa"
+	"strconv"
+)
 
 type DynamicInterpreter struct {
+	Function        *ssa.Function
 	PathCondition   SymbolicExpression
-	Memory          map[string]*SymbolicExpression
+	Memory          map[string]SymbolicExpression
 	ReturnValue     SymbolicExpression
-	BlocksStack     []*ssa.BasicBlock
-	NextInstruction interface{}
+	Instructions    []ssa.Instruction
+	InstructionsPtr int
+}
+
+func (interpreter *DynamicInterpreter) copy() DynamicInterpreter {
+	return DynamicInterpreter{
+		Function:        interpreter.Function,
+		PathCondition:   interpreter.PathCondition,
+		Memory:          interpreter.Memory,
+		ReturnValue:     interpreter.ReturnValue,
+		Instructions:    interpreter.Instructions,
+		InstructionsPtr: interpreter.InstructionsPtr,
+	}
 }
 
 func InterpretDynamically(interpreter DynamicInterpreter) []DynamicInterpreter {
-	return interpreter.interpretDynamically(interpreter.NextInstruction)
+	if interpreter.Instructions == nil {
+		interpreter.Instructions = interpreter.Function.Blocks[0].Instrs
+		interpreter.InstructionsPtr = 0
+	}
+
+	front := interpreter.Instructions[interpreter.InstructionsPtr]
+	interpreter.InstructionsPtr++
+	return interpreter.interpretDynamically(front.(ssa.Instruction))
 }
 
-func (interpreter *DynamicInterpreter) interpretDynamically(element interface{}) []DynamicInterpreter {
+func (interpreter *DynamicInterpreter) interpretDynamically(element ssa.Instruction) []DynamicInterpreter {
 	switch element.(type) {
 	case *ssa.Alloc:
 		return interpreter.interpretAllocDynamically(element.(*ssa.Alloc))
 	case *ssa.BinOp:
 		return interpreter.interpretBinOpDynamically(element.(*ssa.BinOp))
-	case *ssa.Builtin:
-		return interpreter.interpretBuiltinDynamically(element.(*ssa.Builtin))
 	case *ssa.Call:
 		return interpreter.interpretCallDynamically(element.(*ssa.Call))
 	case *ssa.ChangeInterface:
 		return interpreter.interpretChangeInterfaceDynamically(element.(*ssa.ChangeInterface))
 	case *ssa.ChangeType:
 		return interpreter.interpretChangeTypeDynamically(element.(*ssa.ChangeType))
-	case *ssa.Const:
-		return interpreter.interpretConstDynamically(element.(*ssa.Const))
 	case *ssa.Convert:
 		return interpreter.interpretConvertDynamically(element.(*ssa.Convert))
 	case *ssa.DebugRef:
@@ -42,10 +60,6 @@ func (interpreter *DynamicInterpreter) interpretDynamically(element interface{})
 		return interpreter.interpretFieldDynamically(element.(*ssa.Field))
 	case *ssa.FieldAddr:
 		return interpreter.interpretFieldAddrDynamically(element.(*ssa.FieldAddr))
-	case *ssa.FreeVar:
-		return interpreter.interpretFreeVarDynamically(element.(*ssa.FreeVar))
-	case *ssa.Global:
-		return interpreter.interpretGlobalDynamically(element.(*ssa.Global))
 	case *ssa.Go:
 		return interpreter.interpretGoDynamically(element.(*ssa.Go))
 	case *ssa.If:
@@ -72,14 +86,10 @@ func (interpreter *DynamicInterpreter) interpretDynamically(element interface{})
 		return interpreter.interpretMapUpdateDynamically(element.(*ssa.MapUpdate))
 	case *ssa.MultiConvert:
 		return interpreter.interpretMultiConvertDynamically(element.(*ssa.MultiConvert))
-	case *ssa.NamedConst:
-		return interpreter.interpretNamedConstDynamically(element.(*ssa.NamedConst))
 	case *ssa.Next:
 		return interpreter.interpretNextDynamically(element.(*ssa.Next))
 	case *ssa.Panic:
 		return interpreter.interpretPanicDynamically(element.(*ssa.Panic))
-	case *ssa.Parameter:
-		return interpreter.interpretParameterDynamically(element.(*ssa.Parameter))
 	case *ssa.Phi:
 		return interpreter.interpretPhiDynamically(element.(*ssa.Phi))
 	case *ssa.Range:
@@ -98,17 +108,89 @@ func (interpreter *DynamicInterpreter) interpretDynamically(element interface{})
 		return interpreter.interpretSliceToArrayPointerDynamically(element.(*ssa.SliceToArrayPointer))
 	case *ssa.Store:
 		return interpreter.interpretStoreDynamically(element.(*ssa.Store))
-	case *ssa.Type:
-		return interpreter.interpretTypeDynamically(element.(*ssa.Type))
 	case *ssa.TypeAssert:
 		return interpreter.interpretTypeAssertDynamically(element.(*ssa.TypeAssert))
 	case *ssa.UnOp:
 		return interpreter.interpretUnOpDynamically(element.(*ssa.UnOp))
-	case *ssa.BasicBlock:
-		return interpreter.interpretBasicBlockDynamically(element.(*ssa.BasicBlock))
 	default:
 		panic("Unexpected element")
 	}
+}
+
+func (interpreter *DynamicInterpreter) resolveExpression(value ssa.Value) SymbolicExpression {
+	switch value.(type) {
+	case *ssa.Const:
+		return interpreter.resolveConst(value.(*ssa.Const))
+	case *ssa.BinOp:
+		return interpreter.resolveBinOp(value.(*ssa.BinOp))
+	case *ssa.Parameter:
+		return interpreter.resolveParameter(value.(*ssa.Parameter))
+	default:
+		panic("Unexpected element")
+	}
+}
+
+func (interpreter *DynamicInterpreter) resolveConst(element *ssa.Const) SymbolicExpression {
+	switch element.Type().String() {
+	case "int":
+		value, _ := strconv.Atoi(element.Value.ExactString())
+		return &Literal[int]{value}
+	case "uint":
+		value, _ := strconv.ParseUint(element.Value.ExactString(), 10, 64)
+		return &Literal[uint]{uint(value)}
+	case "float64":
+		value, _ := strconv.ParseFloat(element.Value.ExactString(), 64)
+		return &Literal[float64]{value}
+	}
+	panic("unexpected const")
+}
+
+func (interpreter *DynamicInterpreter) resolveBinOp(element *ssa.BinOp) SymbolicExpression {
+	left := interpreter.resolveExpression(element.X)
+	right := interpreter.resolveExpression(element.Y)
+
+	switch element.Op.String() {
+	case "+":
+		return &BinaryOperation{Left: left, Right: right, Type: Add}
+	case "-":
+		return &BinaryOperation{Left: left, Right: right, Type: Sub}
+	case "*":
+		return &BinaryOperation{Left: left, Right: right, Type: Mul}
+	case "/":
+		return &BinaryOperation{Left: left, Right: right, Type: Div}
+	case "%":
+		return &BinaryOperation{Left: left, Right: right, Type: Mod}
+	case "&":
+		return CreateAnd(left, right)
+	case "|":
+		return CreateOr(left, right)
+	case "^":
+		return &BinaryOperation{Left: left, Right: right, Type: Xor}
+	case "<<":
+		return &BinaryOperation{Left: left, Right: right, Type: LeftShift}
+	case ">>":
+		return &BinaryOperation{Left: left, Right: right, Type: RightShift}
+	case "&^":
+		return &BinaryOperation{Left: left, Right: right, Type: AndNot}
+	case "==":
+		return &Equals{Left: left, Right: right}
+	case "!=":
+		return &Not{&Equals{Left: left, Right: right}}
+	case "<":
+		return &LT{Left: left, Right: right}
+	case "<=":
+		return &BinaryOperation{Left: &LT{Left: left, Right: right}, Right: &Equals{Left: left, Right: right}, Type: Or}
+	case ">":
+		return &GT{Left: left, Right: right}
+	case ">=":
+		return &BinaryOperation{Left: &GT{Left: left, Right: right}, Right: &Equals{Left: left, Right: right}, Type: Or}
+	default:
+		panic("unexpected binOp")
+	}
+}
+
+func (interpreter *DynamicInterpreter) resolveParameter(element *ssa.Parameter) SymbolicExpression {
+	return &InputValue{Name: element.Name(), Type: element.Type().String()}
 }
 
 func (interpreter *DynamicInterpreter) interpretAllocDynamically(element *ssa.Alloc) []DynamicInterpreter {
@@ -116,11 +198,8 @@ func (interpreter *DynamicInterpreter) interpretAllocDynamically(element *ssa.Al
 }
 
 func (interpreter *DynamicInterpreter) interpretBinOpDynamically(element *ssa.BinOp) []DynamicInterpreter {
-	panic("TODO")
-}
-
-func (interpreter *DynamicInterpreter) interpretBuiltinDynamically(element *ssa.Builtin) []DynamicInterpreter {
-	panic("TODO")
+	interpreter.resolveExpression(element)
+	return []DynamicInterpreter{*interpreter}
 }
 
 func (interpreter *DynamicInterpreter) interpretCallDynamically(element *ssa.Call) []DynamicInterpreter {
@@ -132,10 +211,6 @@ func (interpreter *DynamicInterpreter) interpretChangeInterfaceDynamically(eleme
 }
 
 func (interpreter *DynamicInterpreter) interpretChangeTypeDynamically(element *ssa.ChangeType) []DynamicInterpreter {
-	panic("TODO")
-}
-
-func (interpreter *DynamicInterpreter) interpretConstDynamically(element *ssa.Const) []DynamicInterpreter {
 	panic("TODO")
 }
 
@@ -163,20 +238,28 @@ func (interpreter *DynamicInterpreter) interpretFieldAddrDynamically(element *ss
 	panic("TODO")
 }
 
-func (interpreter *DynamicInterpreter) interpretFreeVarDynamically(element *ssa.FreeVar) []DynamicInterpreter {
-	panic("TODO")
-}
-
-func (interpreter *DynamicInterpreter) interpretGlobalDynamically(element *ssa.Global) []DynamicInterpreter {
-	panic("TODO")
-}
-
 func (interpreter *DynamicInterpreter) interpretGoDynamically(element *ssa.Go) []DynamicInterpreter {
 	panic("TODO")
 }
 
 func (interpreter *DynamicInterpreter) interpretIfDynamically(element *ssa.If) []DynamicInterpreter {
-	panic("TODO")
+	cond := interpreter.resolveExpression(element.Cond)
+	successors := element.Block().Succs
+
+	thenBranch := interpreter.copy()
+	elseBranch := interpreter.copy()
+	thenBranch.PathCondition = CreateAnd(thenBranch.PathCondition, cond)
+	thenBranch.Instructions = successors[0].Instrs
+	thenBranch.InstructionsPtr = 0
+
+	elseBranch.PathCondition = CreateAnd(elseBranch.PathCondition, &Not{cond})
+	elseBranch.Instructions = successors[1].Instrs
+	elseBranch.InstructionsPtr = 0
+
+	return []DynamicInterpreter{
+		thenBranch,
+		elseBranch,
+	}
 }
 
 func (interpreter *DynamicInterpreter) interpretIndexDynamically(element *ssa.Index) []DynamicInterpreter {
@@ -223,19 +306,11 @@ func (interpreter *DynamicInterpreter) interpretMultiConvertDynamically(element 
 	panic("TODO")
 }
 
-func (interpreter *DynamicInterpreter) interpretNamedConstDynamically(element *ssa.NamedConst) []DynamicInterpreter {
-	panic("TODO")
-}
-
 func (interpreter *DynamicInterpreter) interpretNextDynamically(element *ssa.Next) []DynamicInterpreter {
 	panic("TODO")
 }
 
 func (interpreter *DynamicInterpreter) interpretPanicDynamically(element *ssa.Panic) []DynamicInterpreter {
-	panic("TODO")
-}
-
-func (interpreter *DynamicInterpreter) interpretParameterDynamically(element *ssa.Parameter) []DynamicInterpreter {
 	panic("TODO")
 }
 
@@ -248,7 +323,8 @@ func (interpreter *DynamicInterpreter) interpretRangeDynamically(element *ssa.Ra
 }
 
 func (interpreter *DynamicInterpreter) interpretReturnDynamically(element *ssa.Return) []DynamicInterpreter {
-	panic("TODO")
+	interpreter.ReturnValue = interpreter.resolveExpression(element.Results[0])
+	return []DynamicInterpreter{*interpreter}
 }
 
 func (interpreter *DynamicInterpreter) interpretRunDefersDynamically(element *ssa.RunDefers) []DynamicInterpreter {
@@ -275,18 +351,10 @@ func (interpreter *DynamicInterpreter) interpretStoreDynamically(element *ssa.St
 	panic("TODO")
 }
 
-func (interpreter *DynamicInterpreter) interpretTypeDynamically(element *ssa.Type) []DynamicInterpreter {
-	panic("TODO")
-}
-
 func (interpreter *DynamicInterpreter) interpretTypeAssertDynamically(element *ssa.TypeAssert) []DynamicInterpreter {
 	panic("TODO")
 }
 
 func (interpreter *DynamicInterpreter) interpretUnOpDynamically(element *ssa.UnOp) []DynamicInterpreter {
-	panic("TODO")
-}
-
-func (interpreter *DynamicInterpreter) interpretBasicBlockDynamically(element *ssa.BasicBlock) []DynamicInterpreter {
 	panic("TODO")
 }

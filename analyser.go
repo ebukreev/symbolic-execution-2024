@@ -38,16 +38,15 @@ func AnalyseDynamically(file string, functionName string) []DynamicInterpreter {
 		function, ok := member.(*ssa.Function)
 		if ok && function != nil && function.Name() == functionName {
 			interpreter := DynamicInterpreter{
-				PathCondition:   &Literal[bool]{true},
-				Memory:          map[string]*SymbolicExpression{},
-				BlocksStack:     []*ssa.BasicBlock{},
-				NextInstruction: function,
+				Function:      function,
+				PathCondition: &Literal[bool]{true},
+				Memory:        map[string]SymbolicExpression{},
 			}
 			analyser.StatesQueue.Push(&Item{value: interpreter, priority: 1})
 			for analyser.StatesQueue.Len() != 0 {
 				interpretationResults := InterpretDynamically(analyser.StatesQueue.Pop().(*Item).value)
 				for _, interpretationResult := range interpretationResults {
-					if interpretationResult.NextInstruction == nil {
+					if interpretationResult.ReturnValue != nil {
 						analyser.Results = append(analyser.Results, interpretationResult)
 					} else {
 						// TODO calculate priority
