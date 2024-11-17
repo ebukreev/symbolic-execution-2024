@@ -125,6 +125,18 @@ func TestFloatOperationsInterpretation(t *testing.T) {
 	}
 }
 
+func TestFloatOperationsDynamicInterpretation(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	file := path.Join(path.Dir(filename), "constraints", "numbers.go")
+
+	results := AnalyseDynamically(file, "floatOperations")
+
+	for _, result := range results {
+		t.Log(result.PathCondition.String() + " => " + result.ReturnValue.String())
+		checkResultWithPathCondition(t, result.PathCondition, result.ReturnValue, true)
+	}
+}
+
 func TestMixedOperationsFirstPath(t *testing.T) {
 	a := &InputValue{Name: "a", Type: "int"}
 	b := &InputValue{Name: "b", Type: "float64"}
@@ -190,6 +202,18 @@ func TestMixedOperationsInterpretation(t *testing.T) {
 	}
 }
 
+func TestMixedOperationsDynamicInterpretation(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	file := path.Join(path.Dir(filename), "constraints", "numbers.go")
+
+	results := AnalyseDynamically(file, "mixedOperations")
+
+	for _, result := range results {
+		t.Log(result.PathCondition.String() + " => " + result.ReturnValue.String())
+		checkResultWithPathCondition(t, result.PathCondition, result.ReturnValue, true)
+	}
+}
+
 func TestNestedConditionsFirstPath(t *testing.T) {
 	a := &InputValue{Name: "a", Type: "int"}
 	b := &InputValue{Name: "b", Type: "float64"}
@@ -233,6 +257,18 @@ func TestNestedConditionsInterpretation(t *testing.T) {
 
 	for cond, value := range conditional.Options {
 		checkResultWithPathCondition(t, cond, value, true)
+	}
+}
+
+func TestNestedConditionsDynamicInterpretation(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	file := path.Join(path.Dir(filename), "constraints", "numbers.go")
+
+	results := AnalyseDynamically(file, "nestedConditions")
+
+	for _, result := range results {
+		t.Log(result.PathCondition.String() + " => " + result.ReturnValue.String())
+		checkResultWithPathCondition(t, result.PathCondition, result.ReturnValue, true)
 	}
 }
 
@@ -296,6 +332,18 @@ func TestBitwiseOperationsInterpretation(t *testing.T) {
 	}
 }
 
+func TestBitwiseOperationsDynamicInterpretation(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	file := path.Join(path.Dir(filename), "constraints", "numbers.go")
+
+	results := AnalyseDynamically(file, "bitwiseOperations")
+
+	for _, result := range results {
+		t.Log(result.PathCondition.String() + " => " + result.ReturnValue.String())
+		checkResultWithPathCondition(t, result.PathCondition, result.ReturnValue, false)
+	}
+}
+
 func TestAdvancedBitwiseFirstPath(t *testing.T) {
 	a := &InputValue{Name: "a", Type: "int"}
 	b := &InputValue{Name: "b", Type: "int"}
@@ -339,6 +387,18 @@ func TestAdvancedBitwiseInterpretation(t *testing.T) {
 
 	for cond, value := range conditional.Options {
 		checkResultWithPathCondition(t, cond, value, false)
+	}
+}
+
+func TestAdvancedBitwiseDynamicInterpretation(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	file := path.Join(path.Dir(filename), "constraints", "numbers.go")
+
+	results := AnalyseDynamically(file, "advancedBitwise")
+
+	for _, result := range results {
+		t.Log(result.PathCondition.String() + " => " + result.ReturnValue.String())
+		checkResultWithPathCondition(t, result.PathCondition, result.ReturnValue, false)
 	}
 }
 
@@ -391,6 +451,18 @@ func TestCombinedBitwiseInterpretation(t *testing.T) {
 
 	for cond, value := range conditional.Options {
 		checkResultWithPathCondition(t, cond, value, false)
+	}
+}
+
+func TestCombinedBitwiseDynamicInterpretation(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	file := path.Join(path.Dir(filename), "constraints", "numbers.go")
+
+	results := AnalyseDynamically(file, "combinedBitwise")
+
+	for _, result := range results {
+		t.Log(result.PathCondition.String() + " => " + result.ReturnValue.String())
+		checkResultWithPathCondition(t, result.PathCondition, result.ReturnValue, false)
 	}
 }
 
@@ -451,6 +523,18 @@ func TestNestedBitwiseInterpretation(t *testing.T) {
 
 	for cond, value := range conditional.Options {
 		checkResultWithPathCondition(t, cond, value, false)
+	}
+}
+
+func TestNestedBitwiseDynamicInterpretation(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	file := path.Join(path.Dir(filename), "constraints", "numbers.go")
+
+	results := AnalyseDynamically(file, "nestedBitwise")
+
+	for _, result := range results {
+		t.Log(result.PathCondition.String() + " => " + result.ReturnValue.String())
+		checkResultWithPathCondition(t, result.PathCondition, result.ReturnValue, false)
 	}
 }
 
