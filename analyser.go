@@ -28,18 +28,19 @@ func AnalyseStatically(file string, functionName string) Conditional {
 }
 
 type Analyser struct {
-	StatesQueue PriorityQueue
-	Results     []DynamicInterpreter
-	Package     *ssa.Package
-	Solver      *Solver
-	SmtBuilder  SmtBuilder
+	StatesQueue  PriorityQueue
+	Results      []DynamicInterpreter
+	Package      *ssa.Package
+	Solver       *Solver
+	SmtBuilder   SmtBuilder
+	PathSelector PathSelector
 }
 
 func AnalyseDynamically(file string, functionName string) []DynamicInterpreter {
 	solver := CreateSolver(false)
 	smtBuilder := SmtBuilder{Context: solver.Context}
 	analyser := Analyser{make(PriorityQueue, 0), make([]DynamicInterpreter, 0), BuildCfg(file),
-		solver, smtBuilder}
+		solver, smtBuilder, RandomPathSelector{}}
 	for _, member := range analyser.Package.Members {
 		function, ok := member.(*ssa.Function)
 		if ok && function != nil && function.Name() == functionName {
@@ -59,11 +60,9 @@ func AnalyseDynamically(file string, functionName string) []DynamicInterpreter {
 							interpretationResult.CurrentFrame().ReturnValue
 						interpretationResult.CallStack = interpretationResult.CallStack[:len(interpretationResult.CallStack)-1]
 						interpretationResult.CurrentFrame().InstructionsPtr--
-						// TODO calculate priority
-						analyser.StatesQueue.Push(&Item{value: interpretationResult, priority: 1})
+						analyser.StatesQueue.Push(&Item{value: interpretationResult, priority: analyser.PathSelector.CalculatePriority(interpretationResult)})
 					} else {
-						// TODO calculate priority
-						analyser.StatesQueue.Push(&Item{value: interpretationResult, priority: 1})
+						analyser.StatesQueue.Push(&Item{value: interpretationResult, priority: analyser.PathSelector.CalculatePriority(interpretationResult)})
 					}
 				}
 			}
