@@ -31,10 +31,15 @@ type Analyser struct {
 	StatesQueue PriorityQueue
 	Results     []DynamicInterpreter
 	Package     *ssa.Package
+	Solver      *Solver
+	SmtBuilder  SmtBuilder
 }
 
 func AnalyseDynamically(file string, functionName string) []DynamicInterpreter {
-	analyser := Analyser{make(PriorityQueue, 0), make([]DynamicInterpreter, 0), BuildCfg(file)}
+	solver := CreateSolver(false)
+	smtBuilder := SmtBuilder{Context: solver.Context}
+	analyser := Analyser{make(PriorityQueue, 0), make([]DynamicInterpreter, 0), BuildCfg(file),
+		solver, smtBuilder}
 	for _, member := range analyser.Package.Members {
 		function, ok := member.(*ssa.Function)
 		if ok && function != nil && function.Name() == functionName {
