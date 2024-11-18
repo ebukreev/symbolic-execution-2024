@@ -182,6 +182,12 @@ func (interpreter *DynamicInterpreter) resolveExpression(value ssa.Value) Symbol
 		if !ok {
 			interpreter.CurrentFrame().Memory[value.Name()] = res
 		}
+	case *ssa.IndexAddr:
+		res = interpreter.resolveIndexAddr(value.(*ssa.IndexAddr))
+	case *ssa.UnOp:
+		res = interpreter.resolveUnOp(value.(*ssa.UnOp))
+	case *ssa.FieldAddr:
+		res = interpreter.resolveFieldAddr(value.(*ssa.FieldAddr))
 	default:
 		panic("Unexpected element")
 	}
@@ -274,6 +280,27 @@ func (interpreter *DynamicInterpreter) resolvePhi(element *ssa.Phi) SymbolicExpr
 	}
 
 	panic("unexpected state")
+}
+
+func (interpreter *DynamicInterpreter) resolveIndexAddr(element *ssa.IndexAddr) SymbolicExpression {
+	array := interpreter.resolveExpression(element.X)
+	index := interpreter.resolveExpression(element.Index)
+	return &ArrayAccess{array, index}
+}
+
+func (interpreter *DynamicInterpreter) resolveUnOp(element *ssa.UnOp) SymbolicExpression {
+	operand := interpreter.resolveExpression(element.X)
+	switch element.Op.String() {
+	case "*":
+		return operand
+	}
+	panic("TODO")
+}
+
+func (interpreter *DynamicInterpreter) resolveFieldAddr(element *ssa.FieldAddr) SymbolicExpression {
+	receiver := interpreter.resolveExpression(element.X)
+	typeSignature := getTypeSignature(element.X.Type())
+	return &FunctionCall{typeSignature + "_" + strconv.Itoa(element.Field), []SymbolicExpression{receiver}}
 }
 
 func (interpreter *DynamicInterpreter) resolveCall(element *ssa.Call) SymbolicExpression {
@@ -377,7 +404,8 @@ func (interpreter *DynamicInterpreter) interpretFieldDynamically(element *ssa.Fi
 }
 
 func (interpreter *DynamicInterpreter) interpretFieldAddrDynamically(element *ssa.FieldAddr) []DynamicInterpreter {
-	panic("TODO")
+	interpreter.resolveExpression(element)
+	return []DynamicInterpreter{*interpreter}
 }
 
 func (interpreter *DynamicInterpreter) interpretGoDynamically(element *ssa.Go) []DynamicInterpreter {
@@ -417,7 +445,8 @@ func (interpreter *DynamicInterpreter) interpretIndexDynamically(element *ssa.In
 }
 
 func (interpreter *DynamicInterpreter) interpretIndexAddrDynamically(element *ssa.IndexAddr) []DynamicInterpreter {
-	panic("TODO")
+	interpreter.resolveExpression(element)
+	return []DynamicInterpreter{*interpreter}
 }
 
 func (interpreter *DynamicInterpreter) interpretJumpDynamically(element *ssa.Jump) []DynamicInterpreter {
@@ -510,7 +539,8 @@ func (interpreter *DynamicInterpreter) interpretTypeAssertDynamically(element *s
 }
 
 func (interpreter *DynamicInterpreter) interpretUnOpDynamically(element *ssa.UnOp) []DynamicInterpreter {
-	panic("TODO")
+	interpreter.resolveExpression(element)
+	return []DynamicInterpreter{*interpreter}
 }
 
 func (analyser *Analyser) checkCondition(condition SymbolicExpression) bool {

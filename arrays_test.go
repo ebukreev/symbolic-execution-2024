@@ -98,6 +98,18 @@ func TestCompareElementInterpretation(t *testing.T) {
 	}
 }
 
+func TestCompareElementDynamicInterpretation(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	file := path.Join(path.Dir(filename), "constraints", "arrays.go")
+
+	results := AnalyseDynamically(file, "compareElement")
+
+	for _, result := range results {
+		t.Log(result.PathCondition.String() + " => " + result.CurrentFrame().ReturnValue.String())
+		checkResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, false)
+	}
+}
+
 func TestCompareAgeFirstPath(t *testing.T) {
 	people := &InputValue{Name: "people", Type: "[]{string,int}"}
 	index := &InputValue{Name: "index", Type: "int"}
@@ -199,5 +211,17 @@ func TestCompareAgeInterpretation(t *testing.T) {
 
 	for cond, value := range conditional.Options {
 		checkResultWithPathCondition(t, cond, value, false)
+	}
+}
+
+func TestCompareAgeDynamicInterpretation(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	file := path.Join(path.Dir(filename), "constraints", "arrays.go")
+
+	results := AnalyseDynamically(file, "compareAge")
+
+	for _, result := range results {
+		t.Log(result.PathCondition.String() + " => " + result.CurrentFrame().ReturnValue.String())
+		checkResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, false)
 	}
 }
