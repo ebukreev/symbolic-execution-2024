@@ -2,17 +2,28 @@ package main
 
 import (
 	"golang.org/x/tools/go/ssa"
+	"slices"
 	"strconv"
+	"strings"
 )
 
-type DynamicInterpreter struct {
+type CallStackFrame struct {
 	Function        *ssa.Function
-	PathCondition   SymbolicExpression
 	Memory          map[string]SymbolicExpression
 	ReturnValue     SymbolicExpression
 	Instructions    []ssa.Instruction
 	InstructionsPtr int
 	BlocksStack     []*ssa.BasicBlock
+}
+
+type DynamicInterpreter struct {
+	CallStack     []CallStackFrame
+	Analyser      *Analyser
+	PathCondition SymbolicExpression
+}
+
+func (interpreter *DynamicInterpreter) CurrentFrame() *CallStackFrame {
+	return &interpreter.CallStack[len(interpreter.CallStack)-1]
 }
 
 func copyMap(m map[string]SymbolicExpression) map[string]SymbolicExpression {
@@ -23,33 +34,40 @@ func copyMap(m map[string]SymbolicExpression) map[string]SymbolicExpression {
 	return cp
 }
 
-func copySlice(slice []*ssa.BasicBlock) []*ssa.BasicBlock {
-	tmp := make([]*ssa.BasicBlock, len(slice))
-	copy(tmp, slice)
+func copySlice(slice []CallStackFrame) []CallStackFrame {
+	tmp := make([]CallStackFrame, len(slice))
+	for i, el := range slice {
+		blocks := make([]*ssa.BasicBlock, len(el.BlocksStack))
+		copy(blocks, el.BlocksStack)
+		tmp[i] = CallStackFrame{
+			el.Function,
+			copyMap(el.Memory),
+			el.ReturnValue,
+			el.Instructions,
+			el.InstructionsPtr,
+			blocks,
+		}
+	}
 	return tmp
 }
 
 func (interpreter *DynamicInterpreter) copy() DynamicInterpreter {
 	return DynamicInterpreter{
-		interpreter.Function,
+		copySlice(interpreter.CallStack),
+		interpreter.Analyser,
 		interpreter.PathCondition,
-		copyMap(interpreter.Memory),
-		interpreter.ReturnValue,
-		interpreter.Instructions,
-		interpreter.InstructionsPtr,
-		copySlice(interpreter.BlocksStack),
 	}
 }
 
 func InterpretDynamically(interpreter DynamicInterpreter) []DynamicInterpreter {
-	if interpreter.Instructions == nil {
-		interpreter.BlocksStack = []*ssa.BasicBlock{interpreter.Function.Blocks[0]}
-		interpreter.Instructions = interpreter.Function.Blocks[0].Instrs
-		interpreter.InstructionsPtr = 0
+	if len(interpreter.CallStack) == 1 && interpreter.CurrentFrame().Instructions == nil {
+		interpreter.CurrentFrame().BlocksStack = []*ssa.BasicBlock{interpreter.CurrentFrame().Function.Blocks[0]}
+		interpreter.CurrentFrame().Instructions = interpreter.CurrentFrame().Function.Blocks[0].Instrs
+		interpreter.CurrentFrame().InstructionsPtr = 0
 	}
 
-	front := interpreter.Instructions[interpreter.InstructionsPtr]
-	interpreter.InstructionsPtr++
+	front := interpreter.CurrentFrame().Instructions[interpreter.CurrentFrame().InstructionsPtr]
+	interpreter.CurrentFrame().InstructionsPtr++
 	return interpreter.interpretDynamically(front.(ssa.Instruction))
 }
 
@@ -135,20 +153,36 @@ func (interpreter *DynamicInterpreter) interpretDynamically(element ssa.Instruct
 }
 
 func (interpreter *DynamicInterpreter) resolveExpression(value ssa.Value) SymbolicExpression {
+
+	currentValue := interpreter.CurrentFrame().Memory[value.Name()]
+	if currentValue != nil {
+		return currentValue
+	}
+
+	var res SymbolicExpression
 	switch value.(type) {
 	case *ssa.Const:
-		return interpreter.resolveConst(value.(*ssa.Const))
+		res = interpreter.resolveConst(value.(*ssa.Const))
 	case *ssa.BinOp:
-		return interpreter.resolveBinOp(value.(*ssa.BinOp))
+		res = interpreter.resolveBinOp(value.(*ssa.BinOp))
 	case *ssa.Parameter:
-		return interpreter.resolveParameter(value.(*ssa.Parameter))
+		res = interpreter.resolveParameter(value.(*ssa.Parameter))
 	case *ssa.Convert:
-		return interpreter.resolveConvert(value.(*ssa.Convert))
+		res = interpreter.resolveConvert(value.(*ssa.Convert))
 	case *ssa.Phi:
-		return interpreter.resolvePhi(value.(*ssa.Phi))
+		res = interpreter.resolvePhi(value.(*ssa.Phi))
+	case *ssa.Call:
+		res = interpreter.resolveCall(value.(*ssa.Call))
 	default:
 		panic("Unexpected element")
 	}
+
+	_, ok := res.(*ssa.Function)
+	if !ok {
+		interpreter.CurrentFrame().Memory[value.Name()] = res
+	}
+
+	return res
 }
 
 func (interpreter *DynamicInterpreter) resolveConst(element *ssa.Const) SymbolicExpression {
@@ -162,6 +196,9 @@ func (interpreter *DynamicInterpreter) resolveConst(element *ssa.Const) Symbolic
 	case "float64":
 		value, _ := strconv.ParseFloat(element.Value.ExactString(), 64)
 		return &Literal[float64]{value}
+	case "string":
+		// TODO strings are not supported now
+		return &Literal[float64]{1.0}
 	}
 	panic("unexpected const")
 }
@@ -220,10 +257,10 @@ func (interpreter *DynamicInterpreter) resolveConvert(element *ssa.Convert) Symb
 
 func (interpreter *DynamicInterpreter) resolvePhi(element *ssa.Phi) SymbolicExpression {
 	for i, pred := range element.Block().Preds {
-		for j := len(interpreter.BlocksStack) - 2; j >= 0; j-- {
-			if pred == interpreter.BlocksStack[j] {
+		for j := len(interpreter.CurrentFrame().BlocksStack) - 2; j >= 0; j-- {
+			if pred == interpreter.CurrentFrame().BlocksStack[j] {
 				edgeValue := interpreter.resolveExpression(element.Edges[i])
-				interpreter.Memory[element.Comment] = edgeValue
+				interpreter.CurrentFrame().Memory[element.Comment] = edgeValue
 
 				return edgeValue
 			}
@@ -231,6 +268,56 @@ func (interpreter *DynamicInterpreter) resolvePhi(element *ssa.Phi) SymbolicExpr
 	}
 
 	panic("unexpected state")
+}
+
+func (interpreter *DynamicInterpreter) resolveCall(element *ssa.Call) SymbolicExpression {
+	signature := strings.ReplaceAll(element.Call.Value.String(), " ", "_") + "("
+	var argValues []SymbolicExpression
+
+	for _, arg := range element.Call.Args {
+		argValues = append(argValues, interpreter.resolveExpression(arg))
+		argType := arg.Type().String()
+		if argType == "complex128" {
+			signature += "ComplexType,"
+		} else if strings.HasPrefix(signature, "builtin_len") {
+			signature += "Type,"
+		} else {
+			signature += argType + ","
+		}
+	}
+	if signature[len(signature)-1] == ',' {
+		signature = signature[:len(signature)-1]
+	}
+	signature = signature + ")"
+
+	supportedSignatures := []string{
+		"builtin_real(ComplexType)",
+		"builtin_imag(ComplexType)",
+		"builtin_len(Type)",
+	}
+
+	if slices.Contains(supportedSignatures, signature) {
+		return &FunctionCall{Signature: signature, Arguments: argValues}
+	} else {
+		functionDecl := interpreter.Analyser.ResolveFunctionDeclaration(signature)
+		memory := make(map[string]SymbolicExpression)
+
+		for i, arg := range argValues {
+			memory[functionDecl.Params[i].Name()] = arg
+		}
+
+		interpreter.CallStack = append(interpreter.CallStack,
+			CallStackFrame{
+				Function:        functionDecl,
+				Memory:          memory,
+				Instructions:    functionDecl.Blocks[0].Instrs,
+				InstructionsPtr: 0,
+				BlocksStack:     []*ssa.BasicBlock{functionDecl.Blocks[0]},
+			},
+		)
+
+		return functionDecl
+	}
 }
 
 func (interpreter *DynamicInterpreter) interpretAllocDynamically(element *ssa.Alloc) []DynamicInterpreter {
@@ -243,7 +330,15 @@ func (interpreter *DynamicInterpreter) interpretBinOpDynamically(element *ssa.Bi
 }
 
 func (interpreter *DynamicInterpreter) interpretCallDynamically(element *ssa.Call) []DynamicInterpreter {
-	panic("TODO")
+	if interpreter.CurrentFrame().ReturnValue != nil {
+		interpreter.CurrentFrame().Memory[element.Name()] = interpreter.CurrentFrame().ReturnValue
+		interpreter.CurrentFrame().ReturnValue = nil
+		return []DynamicInterpreter{*interpreter}
+	}
+
+	interpreter.resolveExpression(element)
+
+	return []DynamicInterpreter{*interpreter}
 }
 
 func (interpreter *DynamicInterpreter) interpretChangeInterfaceDynamically(element *ssa.ChangeInterface) []DynamicInterpreter {
@@ -291,14 +386,14 @@ func (interpreter *DynamicInterpreter) interpretIfDynamically(element *ssa.If) [
 	elseBranch := interpreter.copy()
 
 	thenBranch.PathCondition = CreateAnd(thenBranch.PathCondition, cond)
-	thenBranch.BlocksStack = append(thenBranch.BlocksStack, successors[0])
-	thenBranch.Instructions = successors[0].Instrs
-	thenBranch.InstructionsPtr = 0
+	thenBranch.CurrentFrame().BlocksStack = append(thenBranch.CurrentFrame().BlocksStack, successors[0])
+	thenBranch.CurrentFrame().Instructions = successors[0].Instrs
+	thenBranch.CurrentFrame().InstructionsPtr = 0
 
 	elseBranch.PathCondition = CreateAnd(elseBranch.PathCondition, &Not{cond})
-	elseBranch.BlocksStack = append(elseBranch.BlocksStack, successors[1])
-	elseBranch.Instructions = successors[1].Instrs
-	elseBranch.InstructionsPtr = 0
+	elseBranch.CurrentFrame().BlocksStack = append(elseBranch.CurrentFrame().BlocksStack, successors[1])
+	elseBranch.CurrentFrame().Instructions = successors[1].Instrs
+	elseBranch.CurrentFrame().InstructionsPtr = 0
 
 	return []DynamicInterpreter{
 		thenBranch,
@@ -315,9 +410,9 @@ func (interpreter *DynamicInterpreter) interpretIndexAddrDynamically(element *ss
 }
 
 func (interpreter *DynamicInterpreter) interpretJumpDynamically(element *ssa.Jump) []DynamicInterpreter {
-	interpreter.BlocksStack = append(interpreter.BlocksStack, element.Block().Succs[0])
-	interpreter.Instructions = element.Block().Succs[0].Instrs
-	interpreter.InstructionsPtr = 0
+	interpreter.CurrentFrame().BlocksStack = append(interpreter.CurrentFrame().BlocksStack, element.Block().Succs[0])
+	interpreter.CurrentFrame().Instructions = element.Block().Succs[0].Instrs
+	interpreter.CurrentFrame().InstructionsPtr = 0
 	return []DynamicInterpreter{*interpreter}
 }
 
@@ -371,7 +466,7 @@ func (interpreter *DynamicInterpreter) interpretRangeDynamically(element *ssa.Ra
 }
 
 func (interpreter *DynamicInterpreter) interpretReturnDynamically(element *ssa.Return) []DynamicInterpreter {
-	interpreter.ReturnValue = interpreter.resolveExpression(element.Results[0])
+	interpreter.CurrentFrame().ReturnValue = interpreter.resolveExpression(element.Results[0])
 	return []DynamicInterpreter{*interpreter}
 }
 

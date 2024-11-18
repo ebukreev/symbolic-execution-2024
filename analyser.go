@@ -9,6 +9,7 @@ import (
 	"golang.org/x/tools/go/ssa"
 	"golang.org/x/tools/go/ssa/ssautil"
 	"os"
+	"strings"
 )
 
 func main() {
@@ -29,25 +30,32 @@ func AnalyseStatically(file string, functionName string) Conditional {
 type Analyser struct {
 	StatesQueue PriorityQueue
 	Results     []DynamicInterpreter
+	Package     *ssa.Package
 }
 
 func AnalyseDynamically(file string, functionName string) []DynamicInterpreter {
-	analyser := Analyser{make(PriorityQueue, 0), make([]DynamicInterpreter, 0)}
-	cfg := BuildCfg(file)
-	for _, member := range cfg.Members {
+	analyser := Analyser{make(PriorityQueue, 0), make([]DynamicInterpreter, 0), BuildCfg(file)}
+	for _, member := range analyser.Package.Members {
 		function, ok := member.(*ssa.Function)
 		if ok && function != nil && function.Name() == functionName {
 			interpreter := DynamicInterpreter{
-				Function:      function,
+				CallStack:     []CallStackFrame{{Function: function, Memory: make(map[string]SymbolicExpression)}},
+				Analyser:      &analyser,
 				PathCondition: &Literal[bool]{true},
-				Memory:        map[string]SymbolicExpression{},
 			}
 			analyser.StatesQueue.Push(&Item{value: interpreter, priority: 1})
 			for analyser.StatesQueue.Len() != 0 {
 				interpretationResults := InterpretDynamically(analyser.StatesQueue.Pop().(*Item).value)
 				for _, interpretationResult := range interpretationResults {
-					if interpretationResult.ReturnValue != nil {
+					if len(interpretationResult.CallStack) == 1 && interpretationResult.CurrentFrame().ReturnValue != nil {
 						analyser.Results = append(analyser.Results, interpretationResult)
+					} else if interpretationResult.CurrentFrame().ReturnValue != nil {
+						interpretationResult.CallStack[len(interpretationResult.CallStack)-2].ReturnValue =
+							interpretationResult.CurrentFrame().ReturnValue
+						interpretationResult.CallStack = interpretationResult.CallStack[:len(interpretationResult.CallStack)-1]
+						interpretationResult.CurrentFrame().InstructionsPtr--
+						// TODO calculate priority
+						analyser.StatesQueue.Push(&Item{value: interpretationResult, priority: 1})
 					} else {
 						// TODO calculate priority
 						analyser.StatesQueue.Push(&Item{value: interpretationResult, priority: 1})
@@ -71,4 +79,14 @@ func BuildCfg(file string) *ssa.Package {
 	main, _, _ := ssautil.BuildPackage(&types.Config{Importer: importer.Default()}, fset, pkg, files, 0)
 
 	return main
+}
+
+func (analyser *Analyser) ResolveFunctionDeclaration(signature string) *ssa.Function {
+	for _, member := range analyser.Package.Members {
+		function, ok := member.(*ssa.Function)
+		if ok && function != nil && strings.HasPrefix(signature, function.String()) {
+			return function
+		}
+	}
+	panic("unexpected signature " + signature)
 }

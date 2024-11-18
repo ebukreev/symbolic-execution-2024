@@ -69,8 +69,8 @@ func TestIntegerOperationsDynamicInterpretation(t *testing.T) {
 	results := AnalyseDynamically(file, "integerOperations")
 
 	for _, result := range results {
-		t.Log(result.PathCondition.String() + " => " + result.ReturnValue.String())
-		checkResultWithPathCondition(t, result.PathCondition, result.ReturnValue, false)
+		t.Log(result.PathCondition.String() + " => " + result.CurrentFrame().ReturnValue.String())
+		checkResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, false)
 	}
 }
 
@@ -132,8 +132,8 @@ func TestFloatOperationsDynamicInterpretation(t *testing.T) {
 	results := AnalyseDynamically(file, "floatOperations")
 
 	for _, result := range results {
-		t.Log(result.PathCondition.String() + " => " + result.ReturnValue.String())
-		checkResultWithPathCondition(t, result.PathCondition, result.ReturnValue, true)
+		t.Log(result.PathCondition.String() + " => " + result.CurrentFrame().ReturnValue.String())
+		checkResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, true)
 	}
 }
 
@@ -209,8 +209,8 @@ func TestMixedOperationsDynamicInterpretation(t *testing.T) {
 	results := AnalyseDynamically(file, "mixedOperations")
 
 	for _, result := range results {
-		t.Log(result.PathCondition.String() + " => " + result.ReturnValue.String())
-		checkResultWithPathCondition(t, result.PathCondition, result.ReturnValue, true)
+		t.Log(result.PathCondition.String() + " => " + result.CurrentFrame().ReturnValue.String())
+		checkResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, true)
 	}
 }
 
@@ -267,8 +267,8 @@ func TestNestedConditionsDynamicInterpretation(t *testing.T) {
 	results := AnalyseDynamically(file, "nestedConditions")
 
 	for _, result := range results {
-		t.Log(result.PathCondition.String() + " => " + result.ReturnValue.String())
-		checkResultWithPathCondition(t, result.PathCondition, result.ReturnValue, true)
+		t.Log(result.PathCondition.String() + " => " + result.CurrentFrame().ReturnValue.String())
+		checkResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, true)
 	}
 }
 
@@ -339,8 +339,8 @@ func TestBitwiseOperationsDynamicInterpretation(t *testing.T) {
 	results := AnalyseDynamically(file, "bitwiseOperations")
 
 	for _, result := range results {
-		t.Log(result.PathCondition.String() + " => " + result.ReturnValue.String())
-		checkResultWithPathCondition(t, result.PathCondition, result.ReturnValue, false)
+		t.Log(result.PathCondition.String() + " => " + result.CurrentFrame().ReturnValue.String())
+		checkResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, false)
 	}
 }
 
@@ -397,8 +397,8 @@ func TestAdvancedBitwiseDynamicInterpretation(t *testing.T) {
 	results := AnalyseDynamically(file, "advancedBitwise")
 
 	for _, result := range results {
-		t.Log(result.PathCondition.String() + " => " + result.ReturnValue.String())
-		checkResultWithPathCondition(t, result.PathCondition, result.ReturnValue, false)
+		t.Log(result.PathCondition.String() + " => " + result.CurrentFrame().ReturnValue.String())
+		checkResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, false)
 	}
 }
 
@@ -461,8 +461,8 @@ func TestCombinedBitwiseDynamicInterpretation(t *testing.T) {
 	results := AnalyseDynamically(file, "combinedBitwise")
 
 	for _, result := range results {
-		t.Log(result.PathCondition.String() + " => " + result.ReturnValue.String())
-		checkResultWithPathCondition(t, result.PathCondition, result.ReturnValue, false)
+		t.Log(result.PathCondition.String() + " => " + result.CurrentFrame().ReturnValue.String())
+		checkResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, false)
 	}
 }
 
@@ -533,8 +533,8 @@ func TestNestedBitwiseDynamicInterpretation(t *testing.T) {
 	results := AnalyseDynamically(file, "nestedBitwise")
 
 	for _, result := range results {
-		t.Log(result.PathCondition.String() + " => " + result.ReturnValue.String())
-		checkResultWithPathCondition(t, result.PathCondition, result.ReturnValue, false)
+		t.Log(result.PathCondition.String() + " => " + result.CurrentFrame().ReturnValue.String())
+		checkResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, false)
 	}
 }
 
