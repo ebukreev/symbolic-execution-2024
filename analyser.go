@@ -40,7 +40,7 @@ func AnalyseDynamically(file string, functionName string) []DynamicInterpreter {
 	solver := CreateSolver(false)
 	smtBuilder := SmtBuilder{Context: solver.Context}
 	analyser := Analyser{make(PriorityQueue, 0), make([]DynamicInterpreter, 0), BuildCfg(file),
-		solver, smtBuilder, RandomPathSelector{}}
+		solver, smtBuilder, &NursPathSelector{}}
 	for _, member := range analyser.Package.Members {
 		function, ok := member.(*ssa.Function)
 		if ok && function != nil && function.Name() == functionName {
