@@ -262,12 +262,13 @@ func (interpreter *StaticInterpreter) interpretGoStatically(element *ssa.Go) Sym
 func (interpreter *StaticInterpreter) interpretIfStatically(element *ssa.If) SymbolicExpression {
 	cond := interpreter.interpretStatically(element.Cond)
 	successors := element.Block().Succs
-	enterBranch(*interpreter, cond, successors[0])
+	pc := interpreter.PathCondition
+	interpreter.enterBranch(CreateAnd(pc, cond), successors[0])
 	if len(successors) == 1 {
 		return nil
 	}
 	notCond := &Not{cond}
-	enterBranch(*interpreter, notCond, successors[1])
+	interpreter.enterBranch(CreateAnd(pc, notCond), successors[1])
 	return nil
 }
 
@@ -414,8 +415,8 @@ func (interpreter *StaticInterpreter) interpretBasicBlockStatically(element *ssa
 	return nil
 }
 
-func enterBranch(interpreter StaticInterpreter, condition SymbolicExpression, body *ssa.BasicBlock) SymbolicExpression {
-	interpreter.PathCondition = CreateAnd(interpreter.PathCondition, condition)
+func (interpreter *StaticInterpreter) enterBranch(pathCondition SymbolicExpression, body *ssa.BasicBlock) SymbolicExpression {
+	interpreter.PathCondition = pathCondition
 	interpreter.interpretStatically(body)
 	return &interpreter.ReturnValue
 }
