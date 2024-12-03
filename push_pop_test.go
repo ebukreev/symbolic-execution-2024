@@ -1,6 +1,8 @@
 package main
 
 import (
+	"path"
+	"runtime"
 	"symbolic-execution-2024/z3"
 	"testing"
 )
@@ -40,4 +42,16 @@ func TestPushPopIncrementality(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Log(solver.SmtSolver.Model().String())
+}
+
+func TestPushPopDynamicInterpretation(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	file := path.Join(path.Dir(filename), "constraints", "push_pop.go")
+
+	results := AnalyseDynamically(file, "pushPopIncrementality")
+
+	for _, result := range results {
+		t.Log(result.PathCondition.String() + " => " + result.CurrentFrame().ReturnValue.String())
+		checkResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, false)
+	}
 }

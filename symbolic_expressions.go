@@ -70,6 +70,17 @@ func CreateOr(left SymbolicExpression, right SymbolicExpression) SymbolicExpress
 	return &BinaryOperation{left, right, Or}
 }
 
+func CreateAdd(left SymbolicExpression, right SymbolicExpression) SymbolicExpression {
+	l, lok := left.(*Literal[int])
+	r, rok := right.(*Literal[int])
+
+	if lok && rok {
+		return &Literal[int]{l.Value + r.Value}
+	}
+
+	return &BinaryOperation{left, right, Add}
+}
+
 func (binOp *BinaryOperation) String() string {
 	var operator string
 	switch binOp.Type {
