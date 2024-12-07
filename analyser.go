@@ -80,7 +80,10 @@ func BuildCfg(file string) *ssa.Package {
 
 	pkg := types.NewPackage("main", "")
 
-	main, _, _ := ssautil.BuildPackage(&types.Config{Importer: importer.Default()}, fset, pkg, files, 0)
+	main, _, err := ssautil.BuildPackage(&types.Config{Importer: importer.Default()}, fset, pkg, files, 0)
+	if err != nil {
+		panic(err)
+	}
 
 	return main
 }

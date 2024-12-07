@@ -538,6 +538,18 @@ func TestNestedBitwiseDynamicInterpretation(t *testing.T) {
 	}
 }
 
+func TestSqrtDynamicInterpretation(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	file := path.Join(path.Dir(filename), "constraints", "numbers.go")
+
+	results := AnalyseDynamically(file, "testSqrt")
+
+	for _, result := range results {
+		t.Log(result.PathCondition.String() + " => " + result.CurrentFrame().ReturnValue.String())
+		checkResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, true)
+	}
+}
+
 func checkResultWithPathCondition(t *testing.T, pathCondition SymbolicExpression, resultExpression SymbolicExpression, isFloatResult bool) {
 	solver := CreateSolver(false)
 	smtBuilder := SmtBuilder{Context: solver.Context}

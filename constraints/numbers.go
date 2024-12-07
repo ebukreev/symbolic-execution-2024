@@ -1,5 +1,7 @@
 package main
 
+import "math"
+
 func integerOperations(a int, b int) int {
 	if a > b {
 		return a + b
@@ -91,4 +93,24 @@ func nestedBitwise(a int, b int) int {
 	} else {
 		return a & b
 	}
+}
+
+func testSqrt(n float64) float64 {
+	return math.Sqrt(n)
+}
+
+func sqrt(n float64) float64 {
+	var res = makeSymbolic[float64]()
+	var sqrt = res*res - n
+	assume(sqrt > -1e-9)
+	assume(sqrt < 1e-9)
+	return res
+}
+
+func makeSymbolic[T any]() T {
+	panic("this api is only for analysis")
+}
+
+func assume(expr any) {
+	panic("this api is only for analysis")
 }

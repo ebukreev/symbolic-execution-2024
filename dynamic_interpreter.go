@@ -180,6 +180,10 @@ func (interpreter *DynamicInterpreter) resolveExpression(value ssa.Value) Symbol
 		res = interpreter.resolveCall(value.(*ssa.Call))
 		_, ok := res.(*ssa.Function)
 		if !ok {
+			_, ok = res.(*InputValue)
+			if ok {
+				res.(*InputValue).Name = value.Name()
+			}
 			interpreter.CurrentFrame().Memory[value.Name()] = res
 		}
 	case *ssa.IndexAddr:
@@ -188,6 +192,8 @@ func (interpreter *DynamicInterpreter) resolveExpression(value ssa.Value) Symbol
 		res = interpreter.resolveUnOp(value.(*ssa.UnOp))
 	case *ssa.FieldAddr:
 		res = interpreter.resolveFieldAddr(value.(*ssa.FieldAddr))
+	case *ssa.MakeInterface:
+		res = interpreter.resolveMakeInterface(value.(*ssa.MakeInterface))
 	default:
 		panic("Unexpected element")
 	}
@@ -198,13 +204,13 @@ func (interpreter *DynamicInterpreter) resolveExpression(value ssa.Value) Symbol
 func (interpreter *DynamicInterpreter) resolveConst(element *ssa.Const) SymbolicExpression {
 	switch element.Type().String() {
 	case "int":
-		value, _ := strconv.Atoi(element.Value.ExactString())
+		value, _ := strconv.Atoi(element.Value.String())
 		return &Literal[int]{value}
 	case "uint":
-		value, _ := strconv.ParseUint(element.Value.ExactString(), 10, 64)
+		value, _ := strconv.ParseUint(element.Value.String(), 10, 64)
 		return &Literal[uint]{uint(value)}
 	case "float64":
-		value, _ := strconv.ParseFloat(element.Value.ExactString(), 64)
+		value, _ := strconv.ParseFloat(element.Value.String(), 64)
 		return &Literal[float64]{value}
 	case "string":
 		// TODO strings are not supported now
@@ -293,6 +299,8 @@ func (interpreter *DynamicInterpreter) resolveUnOp(element *ssa.UnOp) SymbolicEx
 	switch element.Op.String() {
 	case "*":
 		return operand
+	case "-":
+		return &BinaryOperation{Left: &Literal[float64]{0.0}, Right: operand, Type: Sub}
 	}
 	panic("TODO")
 }
@@ -301,6 +309,10 @@ func (interpreter *DynamicInterpreter) resolveFieldAddr(element *ssa.FieldAddr) 
 	receiver := interpreter.resolveExpression(element.X)
 	typeSignature := getTypeSignature(element.X.Type())
 	return &FunctionCall{typeSignature + "_" + strconv.Itoa(element.Field), []SymbolicExpression{receiver}}
+}
+
+func (interpreter *DynamicInterpreter) resolveMakeInterface(element *ssa.MakeInterface) SymbolicExpression {
+	return interpreter.resolveExpression(element.X)
 }
 
 func (interpreter *DynamicInterpreter) resolveCall(element *ssa.Call) SymbolicExpression {
@@ -327,9 +339,21 @@ func (interpreter *DynamicInterpreter) resolveCall(element *ssa.Call) SymbolicEx
 		"builtin_real(ComplexType)",
 		"builtin_imag(ComplexType)",
 		"builtin_len(Type)",
+		"math.Sqrt(float64)",
 	}
 
-	if slices.Contains(supportedSignatures, signature) {
+	approximations := map[string]string{"math.Sqrt(float64)": "main.sqrt(float64)"}
+	if approximation, found := approximations[signature]; found {
+		signature = approximation
+	}
+
+	if strings.HasPrefix(signature, "main.makeSymbolic") {
+		return &InputValue{Type: signature[18:strings.Index(signature, "]")]}
+	} else if signature == "main.assume(any)" {
+		cond := argValues[0]
+		interpreter.PathCondition = CreateAnd(interpreter.PathCondition, cond)
+		return cond
+	} else if slices.Contains(supportedSignatures, signature) {
 		return &FunctionCall{Signature: signature, Arguments: argValues}
 	} else {
 		functionDecl := interpreter.Analyser.ResolveFunctionDeclaration(signature)
@@ -469,7 +493,8 @@ func (interpreter *DynamicInterpreter) interpretMakeClosureDynamically(element *
 }
 
 func (interpreter *DynamicInterpreter) interpretMakeInterfaceDynamically(element *ssa.MakeInterface) []DynamicInterpreter {
-	panic("TODO")
+	interpreter.resolveExpression(element)
+	return []DynamicInterpreter{*interpreter}
 }
 
 func (interpreter *DynamicInterpreter) interpretMakeMapDynamically(element *ssa.MakeMap) []DynamicInterpreter {
