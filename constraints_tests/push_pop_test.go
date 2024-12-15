@@ -1,25 +1,26 @@
-package main
+package se
 
 import (
 	"path"
 	"runtime"
+	"symbolic-execution-2024"
 	"symbolic-execution-2024/z3"
 	"testing"
 )
 
 func TestPushPopIncrementality(t *testing.T) {
-	j := &InputValue{Name: "j", Type: "int"}
-	result := &InputValue{Name: "res", Type: "int"}
+	j := &se.InputValue{Name: "j", Type: "int"}
+	result := &se.InputValue{Name: "res", Type: "int"}
 
-	solver := CreateSolver(false)
-	smtBuilder := SmtBuilder{Context: solver.Context}
+	solver := se.CreateSolver(false)
+	smtBuilder := se.SmtBuilder{Context: solver.Context}
 
-	valueAssertion := &Equals{result, &BinaryOperation{&Literal[int]{10 * 11 / 2}, j, Add}}
+	valueAssertion := &se.Equals{result, &se.BinaryOperation{&se.Literal[int]{10 * 11 / 2}, j, se.Add}}
 	solver.SmtSolver.Assert(smtBuilder.BuildSmt(valueAssertion)[0].(z3.Bool))
 
 	solver.SmtSolver.Push()
 
-	mod := &Equals{&BinaryOperation{result, &Literal[int]{2}, Mod}, &Literal[int]{0}}
+	mod := &se.Equals{&se.BinaryOperation{result, &se.Literal[int]{2}, se.Mod}, &se.Literal[int]{0}}
 	solver.SmtSolver.Assert(smtBuilder.BuildSmt(mod)[0].(z3.Bool))
 
 	sat, err := solver.SmtSolver.Check()
@@ -33,7 +34,7 @@ func TestPushPopIncrementality(t *testing.T) {
 
 	solver.SmtSolver.Pop()
 
-	solver.SmtSolver.Assert(smtBuilder.BuildSmt(&Not{mod})[0].(z3.Bool))
+	solver.SmtSolver.Assert(smtBuilder.BuildSmt(&se.Not{mod})[0].(z3.Bool))
 	sat, err = solver.SmtSolver.Check()
 	if !sat {
 		t.Fatal("UNSAT")
@@ -46,9 +47,9 @@ func TestPushPopIncrementality(t *testing.T) {
 
 func TestPushPopDynamicInterpretation(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
-	file := path.Join(path.Dir(filename), "constraints", "push_pop.go")
+	file := path.Join(path.Dir(path.Dir(filename)), "constraints", "push_pop.go")
 
-	results := AnalyseDynamically(file, "pushPopIncrementality")
+	results := se.AnalyseDynamically(file, "pushPopIncrementality")
 
 	for _, result := range results {
 		t.Log(result.PathCondition.String() + " => " + result.CurrentFrame().ReturnValue.String())

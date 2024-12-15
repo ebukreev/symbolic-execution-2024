@@ -1,24 +1,25 @@
-package main
+package se
 
 import (
+	"symbolic-execution-2024"
 	"symbolic-execution-2024/z3"
 	"testing"
 )
 
 func TestCompareAndIncrement(t *testing.T) {
-	a := &InputValue{Name: "a", Type: "int"}
-	b := &InputValue{Name: "b", Type: "int"}
+	a := &se.InputValue{Name: "a", Type: "int"}
+	b := &se.InputValue{Name: "b", Type: "int"}
 
-	solver := CreateSolver(true)
-	smtBuilder := SmtBuilder{Context: solver.Context}
+	solver := se.CreateSolver(true)
+	smtBuilder := se.SmtBuilder{Context: solver.Context}
 
-	pc := &BinaryOperation{&GT{a, b},
-		&Not{&GT{&BinaryOperation{a, &Literal[int]{15}, Add}, b}}, And}
+	pc := &se.BinaryOperation{&se.GT{a, b},
+		&se.Not{&se.GT{&se.BinaryOperation{a, &se.Literal[int]{15}, se.Add}, b}}, se.And}
 
 	solver.SmtSolver.Assert(smtBuilder.BuildSmt(pc)[0].(z3.Bool))
 
-	assumption1 := &LT{&BinaryOperation{b, a, Sub}, &Literal[int]{5}}
-	assumption2 := &GT{&BinaryOperation{b, a, Sub}, &Literal[int]{0}}
+	assumption1 := &se.LT{&se.BinaryOperation{b, a, se.Sub}, &se.Literal[int]{5}}
+	assumption2 := &se.GT{&se.BinaryOperation{b, a, se.Sub}, &se.Literal[int]{0}}
 	assumption1Ast := smtBuilder.BuildSmt(assumption1)[0].(z3.Bool).AsAST()
 	assumption2Ast := smtBuilder.BuildSmt(assumption2)[0].(z3.Bool).AsAST()
 

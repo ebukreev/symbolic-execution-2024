@@ -1,4 +1,4 @@
-package main
+package se
 
 import (
 	"golang.org/x/tools/go/ssa"

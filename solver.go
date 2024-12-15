@@ -1,4 +1,4 @@
-package main
+package se
 
 import "symbolic-execution-2024/z3"
 
