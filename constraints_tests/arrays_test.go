@@ -21,7 +21,7 @@ func TestCompareElementFirstPath(t *testing.T) {
 
 	expression := &se.Literal[int]{-1}
 
-	checkResultWithPathCondition(t, pc, expression, false)
+	se.CheckResultWithPathCondition(t, pc, expression, false)
 }
 
 func TestCompareElementSecondPath(t *testing.T) {
@@ -41,7 +41,7 @@ func TestCompareElementSecondPath(t *testing.T) {
 
 	newPc := &se.BinaryOperation{pc, &se.GT{element, value}, se.And}
 
-	checkResultWithPathCondition(t, newPc, &se.Literal[int]{1}, false)
+	se.CheckResultWithPathCondition(t, newPc, &se.Literal[int]{1}, false)
 }
 
 func TestCompareElementThirdPath(t *testing.T) {
@@ -62,7 +62,7 @@ func TestCompareElementThirdPath(t *testing.T) {
 	newPc := &se.BinaryOperation{&se.BinaryOperation{pc, &se.Not{&se.GT{element, value}}, se.And},
 		&se.LT{element, value}, se.And}
 
-	checkResultWithPathCondition(t, newPc, &se.Literal[int]{-1}, false)
+	se.CheckResultWithPathCondition(t, newPc, &se.Literal[int]{-1}, false)
 }
 
 func TestCompareElementFourthPath(t *testing.T) {
@@ -83,7 +83,7 @@ func TestCompareElementFourthPath(t *testing.T) {
 	newPc := &se.BinaryOperation{&se.BinaryOperation{pc, &se.Not{&se.GT{element, value}}, se.And},
 		&se.Not{&se.LT{element, value}}, se.And}
 
-	checkResultWithPathCondition(t, newPc, &se.Literal[int]{0}, false)
+	se.CheckResultWithPathCondition(t, newPc, &se.Literal[int]{0}, false)
 }
 
 func TestCompareElementInterpretation(t *testing.T) {
@@ -95,7 +95,7 @@ func TestCompareElementInterpretation(t *testing.T) {
 	t.Log((&conditional).String())
 
 	for cond, value := range conditional.Options {
-		checkResultWithPathCondition(t, cond, value, false)
+		se.CheckResultWithPathCondition(t, cond, value, false)
 	}
 }
 
@@ -107,7 +107,7 @@ func TestCompareElementDynamicInterpretation(t *testing.T) {
 
 	for _, result := range results {
 		t.Log(result.PathCondition.String() + " => " + result.CurrentFrame().ReturnValue.String())
-		checkResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, false)
+		se.CheckResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, false)
 	}
 }
 
@@ -125,7 +125,7 @@ func TestCompareAgeFirstPath(t *testing.T) {
 
 	expression := &se.Literal[int]{-1}
 
-	checkResultWithPathCondition(t, pc, expression, false)
+	se.CheckResultWithPathCondition(t, pc, expression, false)
 }
 
 func TestCompareAgeSecondPath(t *testing.T) {
@@ -147,7 +147,7 @@ func TestCompareAgeSecondPath(t *testing.T) {
 
 	expression := &se.Literal[int]{1}
 
-	checkResultWithPathCondition(t, pc, expression, false)
+	se.CheckResultWithPathCondition(t, pc, expression, false)
 }
 
 func TestCompareAgeThirdPath(t *testing.T) {
@@ -173,7 +173,7 @@ func TestCompareAgeThirdPath(t *testing.T) {
 
 	expression := &se.Literal[int]{-1}
 
-	checkResultWithPathCondition(t, pc, expression, false)
+	se.CheckResultWithPathCondition(t, pc, expression, false)
 }
 
 func TestCompareAgeFourthPath(t *testing.T) {
@@ -199,7 +199,7 @@ func TestCompareAgeFourthPath(t *testing.T) {
 
 	expression := &se.Literal[int]{0}
 
-	checkResultWithPathCondition(t, pc, expression, false)
+	se.CheckResultWithPathCondition(t, pc, expression, false)
 }
 
 func TestCompareAgeInterpretation(t *testing.T) {
@@ -211,7 +211,7 @@ func TestCompareAgeInterpretation(t *testing.T) {
 	t.Log((&conditional).String())
 
 	for cond, value := range conditional.Options {
-		checkResultWithPathCondition(t, cond, value, false)
+		se.CheckResultWithPathCondition(t, cond, value, false)
 	}
 }
 
@@ -223,6 +223,6 @@ func TestCompareAgeDynamicInterpretation(t *testing.T) {
 
 	for _, result := range results {
 		t.Log(result.PathCondition.String() + " => " + result.CurrentFrame().ReturnValue.String())
-		checkResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, false)
+		se.CheckResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, false)
 	}
 }

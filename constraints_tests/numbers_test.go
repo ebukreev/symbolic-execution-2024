@@ -4,7 +4,6 @@ import (
 	"path"
 	"runtime"
 	"symbolic-execution-2024"
-	"symbolic-execution-2024/z3"
 	"testing"
 )
 
@@ -19,7 +18,7 @@ func TestIntegerOperationsFirstPath(t *testing.T) {
 		Type:  se.Add,
 	}
 
-	checkResultWithPathCondition(t, pc, resExpr, false)
+	se.CheckResultWithPathCondition(t, pc, resExpr, false)
 }
 
 func TestIntegerOperationsSecondPath(t *testing.T) {
@@ -33,7 +32,7 @@ func TestIntegerOperationsSecondPath(t *testing.T) {
 		Type:  se.Sub,
 	}
 
-	checkResultWithPathCondition(t, pc, resExpr, false)
+	se.CheckResultWithPathCondition(t, pc, resExpr, false)
 }
 
 func TestIntegerOperationsThirdPath(t *testing.T) {
@@ -47,7 +46,7 @@ func TestIntegerOperationsThirdPath(t *testing.T) {
 		Type:  se.Mul,
 	}
 
-	checkResultWithPathCondition(t, pc, resExpr, false)
+	se.CheckResultWithPathCondition(t, pc, resExpr, false)
 }
 
 func TestIntegerOperationsInterpretation(t *testing.T) {
@@ -59,7 +58,7 @@ func TestIntegerOperationsInterpretation(t *testing.T) {
 	t.Log((&conditional).String())
 
 	for cond, value := range conditional.Options {
-		checkResultWithPathCondition(t, cond, value, false)
+		se.CheckResultWithPathCondition(t, cond, value, false)
 	}
 }
 
@@ -71,7 +70,7 @@ func TestIntegerOperationsDynamicInterpretation(t *testing.T) {
 
 	for _, result := range results {
 		t.Log(result.PathCondition.String() + " => " + result.CurrentFrame().ReturnValue.String())
-		checkResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, false)
+		se.CheckResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, false)
 	}
 }
 
@@ -86,7 +85,7 @@ func TestFloatOperationsFirstPath(t *testing.T) {
 		Type:  se.Div,
 	}
 
-	checkResultWithPathCondition(t, pc, resExpr, true)
+	se.CheckResultWithPathCondition(t, pc, resExpr, true)
 }
 
 func TestFloatOperationsSecondPath(t *testing.T) {
@@ -100,7 +99,7 @@ func TestFloatOperationsSecondPath(t *testing.T) {
 		Type:  se.Div,
 	}
 
-	checkResultWithPathCondition(t, pc, resExpr, true)
+	se.CheckResultWithPathCondition(t, pc, resExpr, true)
 }
 
 func TestFloatOperationsThirdPath(t *testing.T) {
@@ -110,7 +109,7 @@ func TestFloatOperationsThirdPath(t *testing.T) {
 
 	resExpr := &se.Literal[float64]{0.0}
 
-	checkResultWithPathCondition(t, pc, resExpr, true)
+	se.CheckResultWithPathCondition(t, pc, resExpr, true)
 }
 
 func TestFloatOperationsInterpretation(t *testing.T) {
@@ -122,7 +121,7 @@ func TestFloatOperationsInterpretation(t *testing.T) {
 	t.Log((&conditional).String())
 
 	for cond, value := range conditional.Options {
-		checkResultWithPathCondition(t, cond, value, true)
+		se.CheckResultWithPathCondition(t, cond, value, true)
 	}
 }
 
@@ -134,7 +133,7 @@ func TestFloatOperationsDynamicInterpretation(t *testing.T) {
 
 	for _, result := range results {
 		t.Log(result.PathCondition.String() + " => " + result.CurrentFrame().ReturnValue.String())
-		checkResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, true)
+		se.CheckResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, true)
 	}
 }
 
@@ -148,7 +147,7 @@ func TestMixedOperationsFirstPath(t *testing.T) {
 
 	resExpr := &se.BinaryOperation{firstUpdate, &se.Literal[float64]{2.0}, se.Mul}
 
-	checkResultWithPathCondition(t, pc, resExpr, true)
+	se.CheckResultWithPathCondition(t, pc, resExpr, true)
 }
 
 func TestMixedOperationsSecondPath(t *testing.T) {
@@ -161,7 +160,7 @@ func TestMixedOperationsSecondPath(t *testing.T) {
 
 	resExpr := &se.BinaryOperation{firstUpdate, &se.Literal[float64]{2.0}, se.Mul}
 
-	checkResultWithPathCondition(t, pc, resExpr, true)
+	se.CheckResultWithPathCondition(t, pc, resExpr, true)
 }
 
 func TestMixedOperationsThirdPath(t *testing.T) {
@@ -174,7 +173,7 @@ func TestMixedOperationsThirdPath(t *testing.T) {
 
 	resExpr := &se.BinaryOperation{firstUpdate, &se.Literal[float64]{2.0}, se.Div}
 
-	checkResultWithPathCondition(t, pc, resExpr, true)
+	se.CheckResultWithPathCondition(t, pc, resExpr, true)
 }
 
 func TestMixedOperationsFourthPath(t *testing.T) {
@@ -187,7 +186,7 @@ func TestMixedOperationsFourthPath(t *testing.T) {
 
 	resExpr := &se.BinaryOperation{firstUpdate, &se.Literal[float64]{2.0}, se.Div}
 
-	checkResultWithPathCondition(t, pc, resExpr, true)
+	se.CheckResultWithPathCondition(t, pc, resExpr, true)
 }
 
 func TestMixedOperationsInterpretation(t *testing.T) {
@@ -199,7 +198,7 @@ func TestMixedOperationsInterpretation(t *testing.T) {
 	t.Log((&conditional).String())
 
 	for cond, value := range conditional.Options {
-		checkResultWithPathCondition(t, cond, value, true)
+		se.CheckResultWithPathCondition(t, cond, value, true)
 	}
 }
 
@@ -211,7 +210,7 @@ func TestMixedOperationsDynamicInterpretation(t *testing.T) {
 
 	for _, result := range results {
 		t.Log(result.PathCondition.String() + " => " + result.CurrentFrame().ReturnValue.String())
-		checkResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, true)
+		se.CheckResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, true)
 	}
 }
 
@@ -223,7 +222,7 @@ func TestNestedConditionsFirstPath(t *testing.T) {
 
 	resExpr := &se.BinaryOperation{&se.Cast{&se.BinaryOperation{a, &se.Literal[int]{-1}, se.Mul}, "float64"}, b, se.Add}
 
-	checkResultWithPathCondition(t, pc, resExpr, true)
+	se.CheckResultWithPathCondition(t, pc, resExpr, true)
 }
 
 func TestNestedConditionsSecondPath(t *testing.T) {
@@ -234,7 +233,7 @@ func TestNestedConditionsSecondPath(t *testing.T) {
 
 	resExpr := &se.BinaryOperation{&se.Cast{&se.BinaryOperation{a, &se.Literal[int]{-1}, se.Mul}, "float64"}, b, se.Sub}
 
-	checkResultWithPathCondition(t, pc, resExpr, true)
+	se.CheckResultWithPathCondition(t, pc, resExpr, true)
 }
 
 func TestNestedConditionsThirdPath(t *testing.T) {
@@ -245,7 +244,7 @@ func TestNestedConditionsThirdPath(t *testing.T) {
 
 	resExpr := &se.BinaryOperation{&se.Cast{a, "float64"}, b, se.Add}
 
-	checkResultWithPathCondition(t, pc, resExpr, true)
+	se.CheckResultWithPathCondition(t, pc, resExpr, true)
 }
 
 func TestNestedConditionsInterpretation(t *testing.T) {
@@ -257,7 +256,7 @@ func TestNestedConditionsInterpretation(t *testing.T) {
 	t.Log((&conditional).String())
 
 	for cond, value := range conditional.Options {
-		checkResultWithPathCondition(t, cond, value, true)
+		se.CheckResultWithPathCondition(t, cond, value, true)
 	}
 }
 
@@ -269,7 +268,7 @@ func TestNestedConditionsDynamicInterpretation(t *testing.T) {
 
 	for _, result := range results {
 		t.Log(result.PathCondition.String() + " => " + result.CurrentFrame().ReturnValue.String())
-		checkResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, true)
+		se.CheckResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, true)
 	}
 }
 
@@ -283,7 +282,7 @@ func TestBitwiseOperationsFirstPath(t *testing.T) {
 
 	resExpr := &se.BinaryOperation{a, b, se.Or}
 
-	checkResultWithPathCondition(t, pc, resExpr, false)
+	se.CheckResultWithPathCondition(t, pc, resExpr, false)
 }
 
 func TestBitwiseOperationsSecondPath(t *testing.T) {
@@ -296,7 +295,7 @@ func TestBitwiseOperationsSecondPath(t *testing.T) {
 
 	resExpr := &se.BinaryOperation{a, b, se.And}
 
-	checkResultWithPathCondition(t, pc, resExpr, false)
+	se.CheckResultWithPathCondition(t, pc, resExpr, false)
 }
 
 func TestBitwiseOperationsThirdPath(t *testing.T) {
@@ -317,7 +316,7 @@ func TestBitwiseOperationsThirdPath(t *testing.T) {
 
 	resExpr := &se.BinaryOperation{a, b, se.Xor}
 
-	checkResultWithPathCondition(t, pc, resExpr, false)
+	se.CheckResultWithPathCondition(t, pc, resExpr, false)
 }
 
 func TestBitwiseOperationsInterpretation(t *testing.T) {
@@ -329,7 +328,7 @@ func TestBitwiseOperationsInterpretation(t *testing.T) {
 	t.Log((&conditional).String())
 
 	for cond, value := range conditional.Options {
-		checkResultWithPathCondition(t, cond, value, false)
+		se.CheckResultWithPathCondition(t, cond, value, false)
 	}
 }
 
@@ -341,7 +340,7 @@ func TestBitwiseOperationsDynamicInterpretation(t *testing.T) {
 
 	for _, result := range results {
 		t.Log(result.PathCondition.String() + " => " + result.CurrentFrame().ReturnValue.String())
-		checkResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, false)
+		se.CheckResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, false)
 	}
 }
 
@@ -353,7 +352,7 @@ func TestAdvancedBitwiseFirstPath(t *testing.T) {
 
 	resExpr := &se.BinaryOperation{a, &se.Literal[int]{1}, se.LeftShift}
 
-	checkResultWithPathCondition(t, pc, resExpr, false)
+	se.CheckResultWithPathCondition(t, pc, resExpr, false)
 }
 
 func TestAdvancedBitwiseSecondPath(t *testing.T) {
@@ -364,7 +363,7 @@ func TestAdvancedBitwiseSecondPath(t *testing.T) {
 
 	resExpr := &se.BinaryOperation{b, &se.Literal[int]{1}, se.RightShift}
 
-	checkResultWithPathCondition(t, pc, resExpr, false)
+	se.CheckResultWithPathCondition(t, pc, resExpr, false)
 }
 
 func TestAdvancedBitwiseThirdPath(t *testing.T) {
@@ -375,7 +374,7 @@ func TestAdvancedBitwiseThirdPath(t *testing.T) {
 
 	resExpr := &se.BinaryOperation{a, b, se.Xor}
 
-	checkResultWithPathCondition(t, pc, resExpr, false)
+	se.CheckResultWithPathCondition(t, pc, resExpr, false)
 }
 
 func TestAdvancedBitwiseInterpretation(t *testing.T) {
@@ -387,7 +386,7 @@ func TestAdvancedBitwiseInterpretation(t *testing.T) {
 	t.Log((&conditional).String())
 
 	for cond, value := range conditional.Options {
-		checkResultWithPathCondition(t, cond, value, false)
+		se.CheckResultWithPathCondition(t, cond, value, false)
 	}
 }
 
@@ -399,7 +398,7 @@ func TestAdvancedBitwiseDynamicInterpretation(t *testing.T) {
 
 	for _, result := range results {
 		t.Log(result.PathCondition.String() + " => " + result.CurrentFrame().ReturnValue.String())
-		checkResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, false)
+		se.CheckResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, false)
 	}
 }
 
@@ -411,7 +410,7 @@ func TestCombinedBitwiseFirstPath(t *testing.T) {
 
 	resExpr := &se.BinaryOperation{a, b, se.Or}
 
-	checkResultWithPathCondition(t, pc, resExpr, false)
+	se.CheckResultWithPathCondition(t, pc, resExpr, false)
 }
 
 func TestCombinedBitwiseSecondPath(t *testing.T) {
@@ -426,7 +425,7 @@ func TestCombinedBitwiseSecondPath(t *testing.T) {
 
 	resExpr := &se.BinaryOperation{resUpdate, b, se.Xor}
 
-	checkResultWithPathCondition(t, pc, resExpr, false)
+	se.CheckResultWithPathCondition(t, pc, resExpr, false)
 }
 
 func TestCombinedBitwiseThirdPath(t *testing.T) {
@@ -439,7 +438,7 @@ func TestCombinedBitwiseThirdPath(t *testing.T) {
 
 	pc := &se.BinaryOperation{firstIf, &se.Not{&se.GT{resUpdate, &se.Literal[int]{10}}}, se.And}
 
-	checkResultWithPathCondition(t, pc, resUpdate, false)
+	se.CheckResultWithPathCondition(t, pc, resUpdate, false)
 }
 
 func TestCombinedBitwiseInterpretation(t *testing.T) {
@@ -451,7 +450,7 @@ func TestCombinedBitwiseInterpretation(t *testing.T) {
 	t.Log((&conditional).String())
 
 	for cond, value := range conditional.Options {
-		checkResultWithPathCondition(t, cond, value, false)
+		se.CheckResultWithPathCondition(t, cond, value, false)
 	}
 }
 
@@ -463,7 +462,7 @@ func TestCombinedBitwiseDynamicInterpretation(t *testing.T) {
 
 	for _, result := range results {
 		t.Log(result.PathCondition.String() + " => " + result.CurrentFrame().ReturnValue.String())
-		checkResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, false)
+		se.CheckResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, false)
 	}
 }
 
@@ -474,7 +473,7 @@ func TestNestedBitwiseFirstPath(t *testing.T) {
 
 	resExpr := &se.Literal[int]{-1}
 
-	checkResultWithPathCondition(t, pc, resExpr, false)
+	se.CheckResultWithPathCondition(t, pc, resExpr, false)
 }
 
 func TestNestedBitwiseSecondPath(t *testing.T) {
@@ -485,7 +484,7 @@ func TestNestedBitwiseSecondPath(t *testing.T) {
 
 	resExpr := &se.BinaryOperation{a, &se.Literal[int]{0}, se.Xor}
 
-	checkResultWithPathCondition(t, pc, resExpr, false)
+	se.CheckResultWithPathCondition(t, pc, resExpr, false)
 }
 
 func TestNestedBitwiseThirdPath(t *testing.T) {
@@ -498,7 +497,7 @@ func TestNestedBitwiseThirdPath(t *testing.T) {
 
 	resExpr := &se.BinaryOperation{a, b, se.Or}
 
-	checkResultWithPathCondition(t, pc, resExpr, false)
+	se.CheckResultWithPathCondition(t, pc, resExpr, false)
 }
 
 func TestNestedBitwiseFourthPath(t *testing.T) {
@@ -511,7 +510,7 @@ func TestNestedBitwiseFourthPath(t *testing.T) {
 
 	resExpr := &se.BinaryOperation{a, b, se.And}
 
-	checkResultWithPathCondition(t, pc, resExpr, false)
+	se.CheckResultWithPathCondition(t, pc, resExpr, false)
 }
 
 func TestNestedBitwiseInterpretation(t *testing.T) {
@@ -523,7 +522,7 @@ func TestNestedBitwiseInterpretation(t *testing.T) {
 	t.Log((&conditional).String())
 
 	for cond, value := range conditional.Options {
-		checkResultWithPathCondition(t, cond, value, false)
+		se.CheckResultWithPathCondition(t, cond, value, false)
 	}
 }
 
@@ -535,7 +534,7 @@ func TestNestedBitwiseDynamicInterpretation(t *testing.T) {
 
 	for _, result := range results {
 		t.Log(result.PathCondition.String() + " => " + result.CurrentFrame().ReturnValue.String())
-		checkResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, false)
+		se.CheckResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, false)
 	}
 }
 
@@ -547,41 +546,6 @@ func TestSqrtDynamicInterpretation(t *testing.T) {
 
 	for _, result := range results {
 		t.Log(result.PathCondition.String() + " => " + result.CurrentFrame().ReturnValue.String())
-		checkResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, true)
-	}
-}
-
-func checkResultWithPathCondition(t *testing.T, pathCondition se.SymbolicExpression, resultExpression se.SymbolicExpression, isFloatResult bool) {
-	solver := se.CreateSolver(false)
-	smtBuilder := se.SmtBuilder{Context: solver.Context}
-
-	solver.SmtSolver.Assert(smtBuilder.BuildSmt(pathCondition)[0].(z3.Bool))
-
-	resultSymbolicVar := &se.InputValue{Name: "res"}
-	if isFloatResult {
-		resultSymbolicVar.Type = "float64"
-	} else {
-		resultSymbolicVar.Type = "int"
-	}
-
-	res := smtBuilder.BuildSmt(resultSymbolicVar)[0]
-	expressionSmt := smtBuilder.BuildSmt(resultExpression)[0]
-
-	if isFloatResult {
-		solver.SmtSolver.Assert(res.(z3.Float).Eq(expressionSmt.(z3.Float)))
-	} else {
-		solver.SmtSolver.Assert(res.(z3.BV).Eq(expressionSmt.(z3.BV)))
-	}
-
-	sat, err := solver.SmtSolver.Check()
-	if !sat {
-		t.Log("UNSAT")
-	}
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if sat {
-		t.Log(solver.SmtSolver.Model().String())
+		se.CheckResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, true)
 	}
 }

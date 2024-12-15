@@ -53,6 +53,6 @@ func TestPushPopDynamicInterpretation(t *testing.T) {
 
 	for _, result := range results {
 		t.Log(result.PathCondition.String() + " => " + result.CurrentFrame().ReturnValue.String())
-		checkResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, false)
+		se.CheckResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, false)
 	}
 }

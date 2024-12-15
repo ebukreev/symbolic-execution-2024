@@ -4,7 +4,6 @@ import (
 	"path"
 	"runtime"
 	"symbolic-execution-2024"
-	"symbolic-execution-2024/z3"
 	"testing"
 )
 
@@ -15,7 +14,7 @@ func TestBasicComplexOperationsFirstPath(t *testing.T) {
 	realB := &se.FunctionCall{"builtin_real(ComplexType)", []se.SymbolicExpression{b}}
 	pc := &se.GT{realA, realB}
 
-	checkComplexResultAndPathCondition(t, pc, &se.BinaryOperation{a, b, se.Add}, false)
+	se.CheckComplexResultAndPathCondition(t, pc, &se.BinaryOperation{a, b, se.Add}, false)
 }
 
 func TestBasicComplexOperationsSecondPath(t *testing.T) {
@@ -27,7 +26,7 @@ func TestBasicComplexOperationsSecondPath(t *testing.T) {
 			Right: &se.FunctionCall{"builtin_imag(ComplexType)", []se.SymbolicExpression{b}}},
 		se.And}
 
-	checkComplexResultAndPathCondition(t, pc, &se.BinaryOperation{a, b, se.Sub}, false)
+	se.CheckComplexResultAndPathCondition(t, pc, &se.BinaryOperation{a, b, se.Sub}, false)
 }
 
 func TestBasicComplexOperationsThirdPath(t *testing.T) {
@@ -39,7 +38,7 @@ func TestBasicComplexOperationsThirdPath(t *testing.T) {
 			Right: &se.FunctionCall{"builtin_imag(ComplexType)", []se.SymbolicExpression{b}}}},
 		se.And}
 
-	checkComplexResultAndPathCondition(t, pc, &se.BinaryOperation{a, b, se.Mul}, false)
+	se.CheckComplexResultAndPathCondition(t, pc, &se.BinaryOperation{a, b, se.Mul}, false)
 }
 
 func TestBasicComplexOperationsInterpretation(t *testing.T) {
@@ -51,7 +50,7 @@ func TestBasicComplexOperationsInterpretation(t *testing.T) {
 	t.Log((&conditional).String())
 
 	for cond, value := range conditional.Options {
-		checkComplexResultAndPathCondition(t, cond, value, false)
+		se.CheckComplexResultAndPathCondition(t, cond, value, false)
 	}
 }
 
@@ -63,7 +62,7 @@ func TestBasicComplexOperationsDynamicInterpretation(t *testing.T) {
 
 	for _, result := range results {
 		t.Log(result.PathCondition.String() + " => " + result.CurrentFrame().ReturnValue.String())
-		checkComplexResultAndPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, false)
+		se.CheckComplexResultAndPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, false)
 	}
 }
 
@@ -79,7 +78,7 @@ func TestComplexMagnitude(t *testing.T) {
 		se.Add,
 	}
 
-	checkComplexResultAndPathCondition(t, pc, expression, true)
+	se.CheckComplexResultAndPathCondition(t, pc, expression, true)
 }
 
 func TestComplexMagnitudeInterpretation(t *testing.T) {
@@ -91,7 +90,7 @@ func TestComplexMagnitudeInterpretation(t *testing.T) {
 	t.Log((&conditional).String())
 
 	for cond, value := range conditional.Options {
-		checkComplexResultAndPathCondition(t, cond, value, true)
+		se.CheckComplexResultAndPathCondition(t, cond, value, true)
 	}
 }
 
@@ -103,7 +102,7 @@ func TestComplexMagnitudeDynamicInterpretation(t *testing.T) {
 
 	for _, result := range results {
 		t.Log(result.PathCondition.String() + " => " + result.CurrentFrame().ReturnValue.String())
-		checkComplexResultAndPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, true)
+		se.CheckComplexResultAndPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, true)
 	}
 }
 
@@ -129,7 +128,7 @@ func TestComplexComparisonFirstPath(t *testing.T) {
 
 	pc := &se.GT{magA, magB}
 
-	checkComplexResultAndPathCondition(t, pc, &se.Literal[float64]{1.0}, true)
+	se.CheckComplexResultAndPathCondition(t, pc, &se.Literal[float64]{1.0}, true)
 }
 
 func TestComplexComparisonSecondPath(t *testing.T) {
@@ -154,7 +153,7 @@ func TestComplexComparisonSecondPath(t *testing.T) {
 
 	pc := &se.BinaryOperation{&se.Not{&se.GT{magA, magB}}, &se.LT{magA, magB}, se.And}
 
-	checkComplexResultAndPathCondition(t, pc, &se.Literal[float64]{2.0}, true)
+	se.CheckComplexResultAndPathCondition(t, pc, &se.Literal[float64]{2.0}, true)
 }
 
 func TestComplexComparisonThirdPath(t *testing.T) {
@@ -179,7 +178,7 @@ func TestComplexComparisonThirdPath(t *testing.T) {
 
 	pc := &se.BinaryOperation{&se.Not{&se.GT{magA, magB}}, &se.Not{&se.LT{magA, magB}}, se.And}
 
-	checkComplexResultAndPathCondition(t, pc, &se.Literal[float64]{2.0}, true)
+	se.CheckComplexResultAndPathCondition(t, pc, &se.Literal[float64]{2.0}, true)
 }
 
 func TestComplexComparisonDynamicInterpretation(t *testing.T) {
@@ -190,7 +189,7 @@ func TestComplexComparisonDynamicInterpretation(t *testing.T) {
 
 	for _, result := range results {
 		t.Log(result.PathCondition.String() + " => " + result.CallStack[0].ReturnValue.String())
-		checkComplexResultAndPathCondition(t, result.PathCondition, result.CallStack[0].ReturnValue, true)
+		se.CheckComplexResultAndPathCondition(t, result.PathCondition, result.CallStack[0].ReturnValue, true)
 	}
 }
 
@@ -205,7 +204,7 @@ func TestComplexOperationsFirstPath(t *testing.T) {
 
 	expr := b
 
-	checkComplexResultAndPathCondition(t, pc, expr, false)
+	se.CheckComplexResultAndPathCondition(t, pc, expr, false)
 }
 
 func TestComplexOperationsSecondPath(t *testing.T) {
@@ -224,7 +223,7 @@ func TestComplexOperationsSecondPath(t *testing.T) {
 
 	expr := a
 
-	checkComplexResultAndPathCondition(t, pc, expr, false)
+	se.CheckComplexResultAndPathCondition(t, pc, expr, false)
 }
 
 func TestComplexOperationsThirdPath(t *testing.T) {
@@ -246,7 +245,7 @@ func TestComplexOperationsThirdPath(t *testing.T) {
 
 	expr := &se.BinaryOperation{a, b, se.Div}
 
-	checkComplexResultAndPathCondition(t, pc, expr, false)
+	se.CheckComplexResultAndPathCondition(t, pc, expr, false)
 }
 
 func TestComplexOperationsFourthPath(t *testing.T) {
@@ -268,7 +267,7 @@ func TestComplexOperationsFourthPath(t *testing.T) {
 
 	expr := &se.BinaryOperation{a, b, se.Add}
 
-	checkComplexResultAndPathCondition(t, pc, expr, false)
+	se.CheckComplexResultAndPathCondition(t, pc, expr, false)
 }
 
 func TestComplexOperationsInterpretation(t *testing.T) {
@@ -280,7 +279,7 @@ func TestComplexOperationsInterpretation(t *testing.T) {
 	t.Log((&conditional).String())
 
 	for cond, value := range conditional.Options {
-		checkComplexResultAndPathCondition(t, cond, value, false)
+		se.CheckComplexResultAndPathCondition(t, cond, value, false)
 	}
 }
 
@@ -292,7 +291,7 @@ func TestComplexOperationsDynamicInterpretation(t *testing.T) {
 
 	for _, result := range results {
 		t.Log(result.PathCondition.String() + " => " + result.CallStack[0].ReturnValue.String())
-		checkComplexResultAndPathCondition(t, result.PathCondition, result.CallStack[0].ReturnValue, false)
+		se.CheckComplexResultAndPathCondition(t, result.PathCondition, result.CallStack[0].ReturnValue, false)
 	}
 }
 
@@ -306,7 +305,7 @@ func TestNestedComplexOperationsFirstPath(t *testing.T) {
 
 	expr := &se.BinaryOperation{a, b, se.Mul}
 
-	checkComplexResultAndPathCondition(t, pc, expr, false)
+	se.CheckComplexResultAndPathCondition(t, pc, expr, false)
 }
 
 func TestNestedComplexOperationsSecondPath(t *testing.T) {
@@ -319,7 +318,7 @@ func TestNestedComplexOperationsSecondPath(t *testing.T) {
 
 	expr := &se.BinaryOperation{a, b, se.Add}
 
-	checkComplexResultAndPathCondition(t, pc, expr, false)
+	se.CheckComplexResultAndPathCondition(t, pc, expr, false)
 }
 
 func TestNestedComplexOperationsThirdPath(t *testing.T) {
@@ -332,7 +331,7 @@ func TestNestedComplexOperationsThirdPath(t *testing.T) {
 
 	expr := &se.BinaryOperation{a, b, se.Sub}
 
-	checkComplexResultAndPathCondition(t, pc, expr, false)
+	se.CheckComplexResultAndPathCondition(t, pc, expr, false)
 }
 
 func TestNestedComplexOperationsFourthPath(t *testing.T) {
@@ -345,7 +344,7 @@ func TestNestedComplexOperationsFourthPath(t *testing.T) {
 
 	expr := &se.BinaryOperation{a, b, se.Add}
 
-	checkComplexResultAndPathCondition(t, pc, expr, false)
+	se.CheckComplexResultAndPathCondition(t, pc, expr, false)
 }
 
 func TestNestedComplexOperationsInterpretation(t *testing.T) {
@@ -357,7 +356,7 @@ func TestNestedComplexOperationsInterpretation(t *testing.T) {
 	t.Log((&conditional).String())
 
 	for cond, value := range conditional.Options {
-		checkComplexResultAndPathCondition(t, cond, value, false)
+		se.CheckComplexResultAndPathCondition(t, cond, value, false)
 	}
 }
 
@@ -369,47 +368,6 @@ func TestNestedComplexOperationsDynamicInterpretation(t *testing.T) {
 
 	for _, result := range results {
 		t.Log(result.PathCondition.String() + " => " + result.CallStack[0].ReturnValue.String())
-		checkComplexResultAndPathCondition(t, result.PathCondition, result.CallStack[0].ReturnValue, false)
-	}
-}
-
-func checkComplexResultAndPathCondition(t *testing.T, pathCondition se.SymbolicExpression, resultExpression se.SymbolicExpression, isFloatResult bool) {
-	solver := se.CreateSolver(false)
-	smtBuilder := se.SmtBuilder{Context: solver.Context}
-
-	builtSmt := smtBuilder.BuildSmt(pathCondition)
-	for i := 0; i < len(builtSmt); i++ {
-		solver.SmtSolver.Assert(builtSmt[i].(z3.Bool))
-	}
-
-	if isFloatResult {
-		resultSymbolicVar := &se.InputValue{Name: "res", Type: "float64"}
-
-		res := smtBuilder.BuildSmt(resultSymbolicVar)[0]
-
-		expressionSmt := smtBuilder.BuildSmt(resultExpression)
-		solver.SmtSolver.Assert(res.(z3.Float).Eq(expressionSmt[0].(z3.Float)))
-	} else {
-		realResultSymbolicVar := &se.InputValue{Name: "$R_res", Type: "float64"}
-		imaginaryResultSymbolicVar := &se.InputValue{Name: "$I_res", Type: "float64"}
-
-		resReal := smtBuilder.BuildSmt(realResultSymbolicVar)[0]
-		resImaginary := smtBuilder.BuildSmt(imaginaryResultSymbolicVar)[0]
-
-		expressionSmt := smtBuilder.BuildSmt(resultExpression)
-		solver.SmtSolver.Assert(resReal.(z3.Float).Eq(expressionSmt[0].(z3.Float)))
-		solver.SmtSolver.Assert(resImaginary.(z3.Float).Eq(expressionSmt[1].(z3.Float)))
-	}
-
-	sat, err := solver.SmtSolver.Check()
-	if !sat {
-		t.Log("UNSAT")
-	}
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if sat {
-		t.Log(solver.SmtSolver.Model().String())
+		se.CheckComplexResultAndPathCondition(t, result.PathCondition, result.CallStack[0].ReturnValue, false)
 	}
 }
