@@ -36,37 +36,61 @@ type Analyser struct {
 	PathSelector PathSelector
 }
 
-func AnalyseDynamically(file string, functionName string) []DynamicInterpreter {
-	solver := CreateSolver(false)
-	smtBuilder := SmtBuilder{Context: solver.Context}
-	analyser := Analyser{make(PriorityQueue, 0), make([]DynamicInterpreter, 0), BuildCfg(file),
-		solver, smtBuilder, &NursPathSelector{}}
-	for _, member := range analyser.Package.Members {
-		function, ok := member.(*ssa.Function)
-		if ok && function != nil && function.Name() == functionName {
-			interpreter := DynamicInterpreter{
-				CallStack:     []CallStackFrame{{Function: function, Memory: make(map[string]SymbolicExpression)}},
-				Analyser:      &analyser,
-				PathCondition: &Literal[bool]{true},
-			}
-			analyser.StatesQueue.Push(&Item{value: interpreter, priority: 1})
-			for analyser.StatesQueue.Len() != 0 {
-				interpretationResults := InterpretDynamically(analyser.StatesQueue.Pop().(*Item).value)
-				for _, interpretationResult := range interpretationResults {
-					if len(interpretationResult.CallStack) == 1 && interpretationResult.CurrentFrame().ReturnValue != nil {
-						analyser.Results = append(analyser.Results, interpretationResult)
-					} else if interpretationResult.CurrentFrame().ReturnValue != nil {
-						interpretationResult.CallStack[len(interpretationResult.CallStack)-2].ReturnValue =
-							interpretationResult.CurrentFrame().ReturnValue
-						interpretationResult.CallStack = interpretationResult.CallStack[:len(interpretationResult.CallStack)-1]
-						interpretationResult.CurrentFrame().InstructionsPtr--
-						analyser.StatesQueue.Push(&Item{value: interpretationResult, priority: analyser.PathSelector.CalculatePriority(interpretationResult)})
-					} else {
-						analyser.StatesQueue.Push(&Item{value: interpretationResult, priority: analyser.PathSelector.CalculatePriority(interpretationResult)})
-					}
+func AnalyseMethodDynamically(file string, typeName string, functionName string) []DynamicInterpreter {
+	pack := BuildCfg(file)
+	for _, member := range pack.Members {
+		typ, ok := member.(*ssa.Type)
+		if ok && typ.Name() == typeName {
+			named := typ.Type().(*types.Named)
+			n := named.NumMethods()
+			for i := 0; i < n; i++ {
+				fun := pack.Prog.FuncValue(named.Method(i))
+				if fun != nil && fun.Name() == functionName {
+					return analyseDynamically(pack, fun)
 				}
 			}
-			break
+		}
+	}
+	return nil
+}
+
+func AnalyseDynamically(file string, functionName string) []DynamicInterpreter {
+	pack := BuildCfg(file)
+	for _, member := range pack.Members {
+		function, ok := member.(*ssa.Function)
+		if ok && function != nil && function.Name() == functionName {
+			return analyseDynamically(pack, function)
+		}
+	}
+	return nil
+}
+
+func analyseDynamically(pack *ssa.Package, function *ssa.Function) []DynamicInterpreter {
+	solver := CreateSolver(false)
+	smtBuilder := SmtBuilder{Context: solver.Context}
+	analyser := Analyser{make(PriorityQueue, 0), make([]DynamicInterpreter, 0), pack,
+		solver, smtBuilder, &NursPathSelector{}}
+
+	interpreter := DynamicInterpreter{
+		CallStack:     []CallStackFrame{{Function: function, Memory: make(map[string]SymbolicExpression)}},
+		Analyser:      &analyser,
+		PathCondition: &Literal[bool]{true},
+	}
+	analyser.StatesQueue.Push(&Item{value: interpreter, priority: 1})
+	for analyser.StatesQueue.Len() != 0 {
+		interpretationResults := InterpretDynamically(analyser.StatesQueue.Pop().(*Item).value)
+		for _, interpretationResult := range interpretationResults {
+			if len(interpretationResult.CallStack) == 1 && interpretationResult.CurrentFrame().ReturnValue != nil {
+				analyser.Results = append(analyser.Results, interpretationResult)
+			} else if interpretationResult.CurrentFrame().ReturnValue != nil {
+				interpretationResult.CallStack[len(interpretationResult.CallStack)-2].ReturnValue =
+					interpretationResult.CurrentFrame().ReturnValue
+				interpretationResult.CallStack = interpretationResult.CallStack[:len(interpretationResult.CallStack)-1]
+				interpretationResult.CurrentFrame().InstructionsPtr--
+				analyser.StatesQueue.Push(&Item{value: interpretationResult, priority: analyser.PathSelector.CalculatePriority(interpretationResult)})
+			} else {
+				analyser.StatesQueue.Push(&Item{value: interpretationResult, priority: analyser.PathSelector.CalculatePriority(interpretationResult)})
+			}
 		}
 	}
 	return analyser.Results
