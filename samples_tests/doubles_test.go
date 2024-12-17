@@ -18,3 +18,27 @@ func TestCompareSum(t *testing.T) {
 		se.CheckResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, true)
 	}
 }
+
+func TestMul(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	file := path.Join(path.Dir(path.Dir(filename)), "samples", "primitives", "doubles.go")
+
+	results := se.AnalyseMethodDynamically(file, "DoubleExamples", "Mul")
+
+	for _, result := range results {
+		t.Log(result.PathCondition.String() + " => " + result.CurrentFrame().ReturnValue.String())
+		se.CheckResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, true)
+	}
+}
+
+func TestCheckNan(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	file := path.Join(path.Dir(path.Dir(filename)), "samples", "primitives", "doubles.go")
+
+	results := se.AnalyseMethodDynamically(file, "DoubleExamples", "CheckNaN")
+
+	for _, result := range results {
+		t.Log(result.PathCondition.String() + " => " + result.CurrentFrame().ReturnValue.String())
+		se.CheckResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, false)
+	}
+}

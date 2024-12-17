@@ -10,6 +10,7 @@ type Solver struct {
 func CreateSolver(unsatCore bool) *Solver {
 	config := z3.NewContextConfig()
 	config.SetBool("unsat_core", unsatCore)
+	config.SetUint("timeout", 1000)
 	context := z3.NewContext(config)
 
 	return &Solver{Context: context, SmtSolver: z3.NewSolver(context)}

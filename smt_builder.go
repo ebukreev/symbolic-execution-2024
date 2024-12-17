@@ -1,6 +1,7 @@
 package se
 
 import (
+	"math"
 	"math/bits"
 	"strconv"
 	"strings"
@@ -134,7 +135,7 @@ func (sb *SmtBuilder) BuildSmt(expression SymbolicExpression) []z3.Value {
 	case *Cast:
 		value := sb.BuildSmt(expression.(*Cast).Value)[0]
 		if value.Sort().Kind() == z3.KindBV && expression.(*Cast).To == "float64" {
-			return []z3.Value{value.(z3.BV).IEEEToFloat(sb.Context.FloatSort(11, 53))}
+			return []z3.Value{value.(z3.BV).SToFloat(sb.Context.FloatSort(11, 53))}
 		} else {
 			panic("unsupported cast")
 		}
@@ -262,6 +263,8 @@ func (sb *SmtBuilder) BuildSmt(expression SymbolicExpression) []z3.Value {
 			}
 			funcDecl := sb.uninterpretedFunction(expression.(*FunctionCall).Signature, []string{GetType(args[0])}, "int")
 			return []z3.Value{funcDecl.Apply(sb.BuildSmt(args[0])[0])}
+		case "math.IsNaN(float64)":
+			return []z3.Value{sb.BuildSmt(&Equals{args[0], &Literal[float64]{math.NaN()}})[0]}
 		}
 
 	case *Array:

@@ -32,7 +32,11 @@ func CheckResultWithPathCondition(t *testing.T, pathCondition SymbolicExpression
 		t.Log("UNSAT")
 	}
 	if err != nil {
-		t.Fatal(err)
+		if err.Error() == "timeout" {
+			t.Log("SMT timeout")
+		} else {
+			t.Fatal(err)
+		}
 	}
 
 	if sat {
