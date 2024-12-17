@@ -53,12 +53,24 @@ func TestIntegerOperationsInterpretation(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	file := path.Join(path.Dir(filename), "constraints", "numbers.go")
 
-	conditional := Analyse(file, "integerOperations")
+	conditional := AnalyseStatically(file, "integerOperations")
 
 	t.Log((&conditional).String())
 
 	for cond, value := range conditional.Options {
 		checkResultWithPathCondition(t, cond, value, false)
+	}
+}
+
+func TestIntegerOperationsDynamicInterpretation(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	file := path.Join(path.Dir(filename), "constraints", "numbers.go")
+
+	results := AnalyseDynamically(file, "integerOperations")
+
+	for _, result := range results {
+		t.Log(result.PathCondition.String() + " => " + result.CurrentFrame().ReturnValue.String())
+		checkResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, false)
 	}
 }
 
@@ -104,12 +116,24 @@ func TestFloatOperationsInterpretation(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	file := path.Join(path.Dir(filename), "constraints", "numbers.go")
 
-	conditional := Analyse(file, "floatOperations")
+	conditional := AnalyseStatically(file, "floatOperations")
 
 	t.Log((&conditional).String())
 
 	for cond, value := range conditional.Options {
 		checkResultWithPathCondition(t, cond, value, true)
+	}
+}
+
+func TestFloatOperationsDynamicInterpretation(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	file := path.Join(path.Dir(filename), "constraints", "numbers.go")
+
+	results := AnalyseDynamically(file, "floatOperations")
+
+	for _, result := range results {
+		t.Log(result.PathCondition.String() + " => " + result.CurrentFrame().ReturnValue.String())
+		checkResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, true)
 	}
 }
 
@@ -169,12 +193,24 @@ func TestMixedOperationsInterpretation(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	file := path.Join(path.Dir(filename), "constraints", "numbers.go")
 
-	conditional := Analyse(file, "mixedOperations")
+	conditional := AnalyseStatically(file, "mixedOperations")
 
 	t.Log((&conditional).String())
 
 	for cond, value := range conditional.Options {
 		checkResultWithPathCondition(t, cond, value, true)
+	}
+}
+
+func TestMixedOperationsDynamicInterpretation(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	file := path.Join(path.Dir(filename), "constraints", "numbers.go")
+
+	results := AnalyseDynamically(file, "mixedOperations")
+
+	for _, result := range results {
+		t.Log(result.PathCondition.String() + " => " + result.CurrentFrame().ReturnValue.String())
+		checkResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, true)
 	}
 }
 
@@ -215,12 +251,24 @@ func TestNestedConditionsInterpretation(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	file := path.Join(path.Dir(filename), "constraints", "numbers.go")
 
-	conditional := Analyse(file, "nestedConditions")
+	conditional := AnalyseStatically(file, "nestedConditions")
 
 	t.Log((&conditional).String())
 
 	for cond, value := range conditional.Options {
 		checkResultWithPathCondition(t, cond, value, true)
+	}
+}
+
+func TestNestedConditionsDynamicInterpretation(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	file := path.Join(path.Dir(filename), "constraints", "numbers.go")
+
+	results := AnalyseDynamically(file, "nestedConditions")
+
+	for _, result := range results {
+		t.Log(result.PathCondition.String() + " => " + result.CurrentFrame().ReturnValue.String())
+		checkResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, true)
 	}
 }
 
@@ -275,12 +323,24 @@ func TestBitwiseOperationsInterpretation(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	file := path.Join(path.Dir(filename), "constraints", "numbers.go")
 
-	conditional := Analyse(file, "bitwiseOperations")
+	conditional := AnalyseStatically(file, "bitwiseOperations")
 
 	t.Log((&conditional).String())
 
 	for cond, value := range conditional.Options {
 		checkResultWithPathCondition(t, cond, value, false)
+	}
+}
+
+func TestBitwiseOperationsDynamicInterpretation(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	file := path.Join(path.Dir(filename), "constraints", "numbers.go")
+
+	results := AnalyseDynamically(file, "bitwiseOperations")
+
+	for _, result := range results {
+		t.Log(result.PathCondition.String() + " => " + result.CurrentFrame().ReturnValue.String())
+		checkResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, false)
 	}
 }
 
@@ -321,12 +381,24 @@ func TestAdvancedBitwiseInterpretation(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	file := path.Join(path.Dir(filename), "constraints", "numbers.go")
 
-	conditional := Analyse(file, "advancedBitwise")
+	conditional := AnalyseStatically(file, "advancedBitwise")
 
 	t.Log((&conditional).String())
 
 	for cond, value := range conditional.Options {
 		checkResultWithPathCondition(t, cond, value, false)
+	}
+}
+
+func TestAdvancedBitwiseDynamicInterpretation(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	file := path.Join(path.Dir(filename), "constraints", "numbers.go")
+
+	results := AnalyseDynamically(file, "advancedBitwise")
+
+	for _, result := range results {
+		t.Log(result.PathCondition.String() + " => " + result.CurrentFrame().ReturnValue.String())
+		checkResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, false)
 	}
 }
 
@@ -373,12 +445,24 @@ func TestCombinedBitwiseInterpretation(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	file := path.Join(path.Dir(filename), "constraints", "numbers.go")
 
-	conditional := Analyse(file, "combinedBitwise")
+	conditional := AnalyseStatically(file, "combinedBitwise")
 
 	t.Log((&conditional).String())
 
 	for cond, value := range conditional.Options {
 		checkResultWithPathCondition(t, cond, value, false)
+	}
+}
+
+func TestCombinedBitwiseDynamicInterpretation(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	file := path.Join(path.Dir(filename), "constraints", "numbers.go")
+
+	results := AnalyseDynamically(file, "combinedBitwise")
+
+	for _, result := range results {
+		t.Log(result.PathCondition.String() + " => " + result.CurrentFrame().ReturnValue.String())
+		checkResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, false)
 	}
 }
 
@@ -433,12 +517,36 @@ func TestNestedBitwiseInterpretation(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	file := path.Join(path.Dir(filename), "constraints", "numbers.go")
 
-	conditional := Analyse(file, "nestedBitwise")
+	conditional := AnalyseStatically(file, "nestedBitwise")
 
 	t.Log((&conditional).String())
 
 	for cond, value := range conditional.Options {
 		checkResultWithPathCondition(t, cond, value, false)
+	}
+}
+
+func TestNestedBitwiseDynamicInterpretation(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	file := path.Join(path.Dir(filename), "constraints", "numbers.go")
+
+	results := AnalyseDynamically(file, "nestedBitwise")
+
+	for _, result := range results {
+		t.Log(result.PathCondition.String() + " => " + result.CurrentFrame().ReturnValue.String())
+		checkResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, false)
+	}
+}
+
+func TestSqrtDynamicInterpretation(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	file := path.Join(path.Dir(filename), "constraints", "numbers.go")
+
+	results := AnalyseDynamically(file, "testSqrt")
+
+	for _, result := range results {
+		t.Log(result.PathCondition.String() + " => " + result.CurrentFrame().ReturnValue.String())
+		checkResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, true)
 	}
 }
 

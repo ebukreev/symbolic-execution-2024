@@ -45,12 +45,24 @@ func TestBasicComplexOperationsInterpretation(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	file := path.Join(path.Dir(filename), "constraints", "complex.go")
 
-	conditional := Analyse(file, "basicComplexOperations")
+	conditional := AnalyseStatically(file, "basicComplexOperations")
 
 	t.Log((&conditional).String())
 
 	for cond, value := range conditional.Options {
 		checkComplexResultAndPathCondition(t, cond, value, false)
+	}
+}
+
+func TestBasicComplexOperationsDynamicInterpretation(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	file := path.Join(path.Dir(filename), "constraints", "complex.go")
+
+	results := AnalyseDynamically(file, "basicComplexOperations")
+
+	for _, result := range results {
+		t.Log(result.PathCondition.String() + " => " + result.CurrentFrame().ReturnValue.String())
+		checkComplexResultAndPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, false)
 	}
 }
 
@@ -73,12 +85,24 @@ func TestComplexMagnitudeInterpretation(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	file := path.Join(path.Dir(filename), "constraints", "complex.go")
 
-	conditional := Analyse(file, "complexMagnitude")
+	conditional := AnalyseStatically(file, "complexMagnitude")
 
 	t.Log((&conditional).String())
 
 	for cond, value := range conditional.Options {
 		checkComplexResultAndPathCondition(t, cond, value, true)
+	}
+}
+
+func TestComplexMagnitudeDynamicInterpretation(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	file := path.Join(path.Dir(filename), "constraints", "complex.go")
+
+	results := AnalyseDynamically(file, "complexMagnitude")
+
+	for _, result := range results {
+		t.Log(result.PathCondition.String() + " => " + result.CurrentFrame().ReturnValue.String())
+		checkComplexResultAndPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, true)
 	}
 }
 
@@ -155,6 +179,18 @@ func TestComplexComparisonThirdPath(t *testing.T) {
 	pc := &BinaryOperation{&Not{&GT{magA, magB}}, &Not{&LT{magA, magB}}, And}
 
 	checkComplexResultAndPathCondition(t, pc, &Literal[float64]{2.0}, true)
+}
+
+func TestComplexComparisonDynamicInterpretation(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	file := path.Join(path.Dir(filename), "constraints", "complex.go")
+
+	results := AnalyseDynamically(file, "complexComparison")
+
+	for _, result := range results {
+		t.Log(result.PathCondition.String() + " => " + result.CallStack[0].ReturnValue.String())
+		checkComplexResultAndPathCondition(t, result.PathCondition, result.CallStack[0].ReturnValue, true)
+	}
 }
 
 func TestComplexOperationsFirstPath(t *testing.T) {
@@ -238,12 +274,24 @@ func TestComplexOperationsInterpretation(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	file := path.Join(path.Dir(filename), "constraints", "complex.go")
 
-	conditional := Analyse(file, "complexOperations")
+	conditional := AnalyseStatically(file, "complexOperations")
 
 	t.Log((&conditional).String())
 
 	for cond, value := range conditional.Options {
 		checkComplexResultAndPathCondition(t, cond, value, false)
+	}
+}
+
+func TestComplexOperationsDynamicInterpretation(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	file := path.Join(path.Dir(filename), "constraints", "complex.go")
+
+	results := AnalyseDynamically(file, "complexOperations")
+
+	for _, result := range results {
+		t.Log(result.PathCondition.String() + " => " + result.CallStack[0].ReturnValue.String())
+		checkComplexResultAndPathCondition(t, result.PathCondition, result.CallStack[0].ReturnValue, false)
 	}
 }
 
@@ -303,12 +351,24 @@ func TestNestedComplexOperationsInterpretation(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	file := path.Join(path.Dir(filename), "constraints", "complex.go")
 
-	conditional := Analyse(file, "nestedComplexOperations")
+	conditional := AnalyseStatically(file, "nestedComplexOperations")
 
 	t.Log((&conditional).String())
 
 	for cond, value := range conditional.Options {
 		checkComplexResultAndPathCondition(t, cond, value, false)
+	}
+}
+
+func TestNestedComplexOperationsDynamicInterpretation(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	file := path.Join(path.Dir(filename), "constraints", "complex.go")
+
+	results := AnalyseDynamically(file, "nestedComplexOperations")
+
+	for _, result := range results {
+		t.Log(result.PathCondition.String() + " => " + result.CallStack[0].ReturnValue.String())
+		checkComplexResultAndPathCondition(t, result.PathCondition, result.CallStack[0].ReturnValue, false)
 	}
 }
 
