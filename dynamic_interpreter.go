@@ -1,6 +1,7 @@
 package se
 
 import (
+	"go/types"
 	"golang.org/x/tools/go/ssa"
 	"slices"
 	"strconv"
@@ -21,14 +22,15 @@ type DynamicInterpreter struct {
 	CallStack     []CallStackFrame
 	Analyser      *Analyser
 	PathCondition SymbolicExpression
+	Heap          *SymbolicMemory
 }
 
 func (interpreter *DynamicInterpreter) CurrentFrame() *CallStackFrame {
 	return &interpreter.CallStack[len(interpreter.CallStack)-1]
 }
 
-func copyMap(m map[string]SymbolicExpression) map[string]SymbolicExpression {
-	cp := make(map[string]SymbolicExpression)
+func copyMap[K string | int, V any](m map[K]V) map[K]V {
+	cp := make(map[K]V)
 	for k, v := range m {
 		cp[k] = v
 	}
@@ -57,6 +59,7 @@ func (interpreter *DynamicInterpreter) copy() DynamicInterpreter {
 		copySlice(interpreter.CallStack),
 		interpreter.Analyser,
 		interpreter.PathCondition,
+		interpreter.Heap.Copy(),
 	}
 }
 
@@ -154,7 +157,11 @@ func (interpreter *DynamicInterpreter) interpretDynamically(element ssa.Instruct
 }
 
 func (interpreter *DynamicInterpreter) resolveExpression(value ssa.Value) SymbolicExpression {
-	var res SymbolicExpression
+	res, ok := interpreter.CurrentFrame().Memory[value.Name()]
+	if ok {
+		return res
+	}
+
 	switch value.(type) {
 	case *ssa.Const:
 		res = interpreter.resolveConst(value.(*ssa.Const))
@@ -194,9 +201,15 @@ func (interpreter *DynamicInterpreter) resolveExpression(value ssa.Value) Symbol
 		res = interpreter.resolveFieldAddr(value.(*ssa.FieldAddr))
 	case *ssa.MakeInterface:
 		res = interpreter.resolveMakeInterface(value.(*ssa.MakeInterface))
+	case *ssa.Alloc:
+		res = interpreter.resolveAlloc(value.(*ssa.Alloc))
+	case *ssa.Slice:
+		res = interpreter.resolveSlice(value.(*ssa.Slice))
 	default:
 		panic("Unexpected element")
 	}
+
+	interpreter.CurrentFrame().Memory[value.Name()] = res
 
 	return res
 }
@@ -212,6 +225,9 @@ func (interpreter *DynamicInterpreter) resolveConst(element *ssa.Const) Symbolic
 	case "float64":
 		value, _ := strconv.ParseFloat(element.Value.String(), 64)
 		return &Literal[float64]{value}
+	case "bool":
+		value, _ := strconv.ParseBool(element.Value.String())
+		return &Literal[bool]{value}
 	case "string":
 		// TODO strings are not supported now
 		return &Literal[float64]{1.0}
@@ -264,7 +280,35 @@ func (interpreter *DynamicInterpreter) resolveBinOp(element *ssa.BinOp) Symbolic
 }
 
 func (interpreter *DynamicInterpreter) resolveParameter(element *ssa.Parameter) SymbolicExpression {
-	return &InputValue{Name: element.Name(), Type: element.Type().String()}
+	value, ok := interpreter.CurrentFrame().Memory[element.Name()]
+	if ok {
+		return value
+	}
+	ptr, isPtr := element.Type().(*types.Pointer)
+	_, isBasic := element.Type().(*types.Basic)
+	var ref SymbolicExpression
+	if isPtr {
+		named, ok := ptr.Elem().(*types.Named)
+		if ok {
+			structure := named.Underlying().(*types.Struct)
+			fieldsNum := structure.NumFields()
+			fields := make(map[int]string, fieldsNum)
+			for i := 0; i < fieldsNum; i++ {
+				fields[i] = structure.Field(i).Type().String()
+			}
+			ref = interpreter.Heap.Deref(interpreter.Heap.AllocateStruct(named.String(), fields))
+		} else {
+			ref = interpreter.Heap.Deref(interpreter.Heap.Allocate(element.Type().String()))
+		}
+	} else if element.Type().String() == "complex128" {
+		ref = interpreter.Heap.AllocateArray("float64")
+	} else if isBasic {
+		ref = &InputValue{Name: element.Name(), Type: element.Type().String()}
+	} else {
+		ref = interpreter.Heap.Allocate(element.Type().String())
+	}
+	interpreter.CurrentFrame().Memory[element.Name()] = ref
+	return ref
 }
 
 func (interpreter *DynamicInterpreter) resolveConvert(element *ssa.Convert) SymbolicExpression {
@@ -291,7 +335,7 @@ func (interpreter *DynamicInterpreter) resolvePhi(element *ssa.Phi) SymbolicExpr
 func (interpreter *DynamicInterpreter) resolveIndexAddr(element *ssa.IndexAddr) SymbolicExpression {
 	array := interpreter.resolveExpression(element.X)
 	index := interpreter.resolveExpression(element.Index)
-	return &ArrayAccess{array, index}
+	return interpreter.Heap.GetFromArray(array, index)
 }
 
 func (interpreter *DynamicInterpreter) resolveUnOp(element *ssa.UnOp) SymbolicExpression {
@@ -307,11 +351,36 @@ func (interpreter *DynamicInterpreter) resolveUnOp(element *ssa.UnOp) SymbolicEx
 
 func (interpreter *DynamicInterpreter) resolveFieldAddr(element *ssa.FieldAddr) SymbolicExpression {
 	receiver := interpreter.resolveExpression(element.X)
-	typeSignature := getTypeSignature(element.X.Type())
-	return &FunctionCall{typeSignature + "_" + strconv.Itoa(element.Field), []SymbolicExpression{receiver}}
+	return interpreter.Heap.GetField(receiver, element.Field)
 }
 
 func (interpreter *DynamicInterpreter) resolveMakeInterface(element *ssa.MakeInterface) SymbolicExpression {
+	return interpreter.resolveExpression(element.X)
+}
+
+func (interpreter *DynamicInterpreter) resolveAlloc(element *ssa.Alloc) SymbolicExpression {
+	elementType := element.Type().(*types.Pointer).Elem()
+	var result SymbolicExpression
+	switch elementType.(type) {
+	case *types.Array:
+		componentType := elementType.(*types.Array).Elem()
+		result = interpreter.Heap.AllocateArray(componentType.String())
+	case *types.Named:
+		structure := elementType.Underlying().(*types.Struct)
+		fieldsNum := structure.NumFields()
+		fields := make(map[int]string, fieldsNum)
+		for i := 0; i < fieldsNum; i++ {
+			fields[i] = structure.Field(i).Type().String()
+		}
+		result = interpreter.Heap.AllocateStruct(elementType.String(), fields)
+		interpreter.CurrentFrame().Memory[element.Comment] = result
+	default:
+		panic("unexpected type")
+	}
+	return result
+}
+
+func (interpreter *DynamicInterpreter) resolveSlice(element *ssa.Slice) SymbolicExpression {
 	return interpreter.resolveExpression(element.X)
 }
 
@@ -336,8 +405,6 @@ func (interpreter *DynamicInterpreter) resolveCall(element *ssa.Call) SymbolicEx
 	signature = signature + ")"
 
 	supportedSignatures := []string{
-		"builtin_real(ComplexType)",
-		"builtin_imag(ComplexType)",
 		"builtin_len(Type)",
 		"math.Sqrt(float64)",
 		"math.IsNaN(float64)",
@@ -354,6 +421,10 @@ func (interpreter *DynamicInterpreter) resolveCall(element *ssa.Call) SymbolicEx
 		cond := argValues[0]
 		interpreter.PathCondition = CreateAnd(interpreter.PathCondition, cond)
 		return cond
+	} else if signature == "builtin_real(ComplexType)" {
+		return interpreter.Heap.GetField(argValues[0], 0)
+	} else if signature == "builtin_imag(ComplexType)" {
+		return interpreter.Heap.GetField(argValues[0], 1)
 	} else if slices.Contains(supportedSignatures, signature) {
 		return &FunctionCall{Signature: signature, Arguments: argValues}
 	} else {
@@ -379,7 +450,8 @@ func (interpreter *DynamicInterpreter) resolveCall(element *ssa.Call) SymbolicEx
 }
 
 func (interpreter *DynamicInterpreter) interpretAllocDynamically(element *ssa.Alloc) []DynamicInterpreter {
-	panic("TODO")
+	interpreter.resolveExpression(element)
+	return []DynamicInterpreter{*interpreter}
 }
 
 func (interpreter *DynamicInterpreter) interpretBinOpDynamically(element *ssa.BinOp) []DynamicInterpreter {
@@ -549,7 +621,8 @@ func (interpreter *DynamicInterpreter) interpretSendDynamically(element *ssa.Sen
 }
 
 func (interpreter *DynamicInterpreter) interpretSliceDynamically(element *ssa.Slice) []DynamicInterpreter {
-	panic("TODO")
+	interpreter.resolveExpression(element)
+	return []DynamicInterpreter{*interpreter}
 }
 
 func (interpreter *DynamicInterpreter) interpretSliceToArrayPointerDynamically(element *ssa.SliceToArrayPointer) []DynamicInterpreter {
@@ -557,7 +630,28 @@ func (interpreter *DynamicInterpreter) interpretSliceToArrayPointerDynamically(e
 }
 
 func (interpreter *DynamicInterpreter) interpretStoreDynamically(element *ssa.Store) []DynamicInterpreter {
-	panic("TODO")
+	value := interpreter.resolveExpression(element.Val)
+	indexAddr, ok := element.Addr.(*ssa.IndexAddr)
+	if ok {
+		array := interpreter.resolveExpression(indexAddr.X)
+		index := interpreter.resolveExpression(indexAddr.Index)
+
+		interpreter.Heap.AssignToArray(array, index, value)
+	}
+
+	fieldAddr, ok := element.Addr.(*ssa.FieldAddr)
+	if ok {
+		field := interpreter.resolveExpression(fieldAddr.X)
+		interpreter.Heap.AssignField(field, fieldAddr.Field, value)
+	}
+
+	_, param := element.Val.(*ssa.Parameter)
+	_, structure := element.Val.Type().Underlying().(*types.Struct)
+	if param && structure {
+		interpreter.CurrentFrame().Memory[element.Addr.Name()] = value
+	}
+
+	return []DynamicInterpreter{*interpreter}
 }
 
 func (interpreter *DynamicInterpreter) interpretTypeAssertDynamically(element *ssa.TypeAssert) []DynamicInterpreter {

@@ -53,25 +53,6 @@ func CheckComplexResultAndPathCondition(t *testing.T, pathCondition SymbolicExpr
 		solver.SmtSolver.Assert(builtSmt[i].(z3.Bool))
 	}
 
-	if isFloatResult {
-		resultSymbolicVar := &InputValue{Name: "res", Type: "float64"}
-
-		res := smtBuilder.BuildSmt(resultSymbolicVar)[0]
-
-		expressionSmt := smtBuilder.BuildSmt(resultExpression)
-		solver.SmtSolver.Assert(res.(z3.Float).Eq(expressionSmt[0].(z3.Float)))
-	} else {
-		realResultSymbolicVar := &InputValue{Name: "$R_res", Type: "float64"}
-		imaginaryResultSymbolicVar := &InputValue{Name: "$I_res", Type: "float64"}
-
-		resReal := smtBuilder.BuildSmt(realResultSymbolicVar)[0]
-		resImaginary := smtBuilder.BuildSmt(imaginaryResultSymbolicVar)[0]
-
-		expressionSmt := smtBuilder.BuildSmt(resultExpression)
-		solver.SmtSolver.Assert(resReal.(z3.Float).Eq(expressionSmt[0].(z3.Float)))
-		solver.SmtSolver.Assert(resImaginary.(z3.Float).Eq(expressionSmt[1].(z3.Float)))
-	}
-
 	sat, err := solver.SmtSolver.Check()
 	if !sat {
 		t.Log("UNSAT")

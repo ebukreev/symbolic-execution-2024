@@ -75,6 +75,8 @@ func analyseDynamically(pack *ssa.Package, function *ssa.Function) []DynamicInte
 		CallStack:     []CallStackFrame{{Function: function, Memory: make(map[string]SymbolicExpression)}},
 		Analyser:      &analyser,
 		PathCondition: &Literal[bool]{true},
+		Heap: &SymbolicMemory{make(map[string]Array),
+			make(map[string]map[int]string), make(map[string]int), &smtBuilder},
 	}
 	analyser.StatesQueue.Push(&Item{value: interpreter, priority: 1})
 	for analyser.StatesQueue.Len() != 0 {

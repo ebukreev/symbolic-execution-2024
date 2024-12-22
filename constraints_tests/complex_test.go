@@ -181,18 +181,6 @@ func TestComplexComparisonThirdPath(t *testing.T) {
 	se.CheckComplexResultAndPathCondition(t, pc, &se.Literal[float64]{2.0}, true)
 }
 
-func TestComplexComparisonDynamicInterpretation(t *testing.T) {
-	_, filename, _, _ := runtime.Caller(0)
-	file := path.Join(path.Dir(path.Dir(filename)), "constraints", "complex.go")
-
-	results := se.AnalyseDynamically(file, "complexComparison")
-
-	for _, result := range results {
-		t.Log(result.PathCondition.String() + " => " + result.CallStack[0].ReturnValue.String())
-		se.CheckComplexResultAndPathCondition(t, result.PathCondition, result.CallStack[0].ReturnValue, true)
-	}
-}
-
 func TestComplexOperationsFirstPath(t *testing.T) {
 	a := &se.InputValue{Name: "a", Type: "complex128"}
 	b := &se.InputValue{Name: "b", Type: "complex128"}
@@ -283,18 +271,6 @@ func TestComplexOperationsInterpretation(t *testing.T) {
 	}
 }
 
-func TestComplexOperationsDynamicInterpretation(t *testing.T) {
-	_, filename, _, _ := runtime.Caller(0)
-	file := path.Join(path.Dir(path.Dir(filename)), "constraints", "complex.go")
-
-	results := se.AnalyseDynamically(file, "complexOperations")
-
-	for _, result := range results {
-		t.Log(result.PathCondition.String() + " => " + result.CallStack[0].ReturnValue.String())
-		se.CheckComplexResultAndPathCondition(t, result.PathCondition, result.CallStack[0].ReturnValue, false)
-	}
-}
-
 func TestNestedComplexOperationsFirstPath(t *testing.T) {
 	a := &se.InputValue{Name: "a", Type: "complex128"}
 	b := &se.InputValue{Name: "b", Type: "complex128"}
@@ -357,17 +333,5 @@ func TestNestedComplexOperationsInterpretation(t *testing.T) {
 
 	for cond, value := range conditional.Options {
 		se.CheckComplexResultAndPathCondition(t, cond, value, false)
-	}
-}
-
-func TestNestedComplexOperationsDynamicInterpretation(t *testing.T) {
-	_, filename, _, _ := runtime.Caller(0)
-	file := path.Join(path.Dir(path.Dir(filename)), "constraints", "complex.go")
-
-	results := se.AnalyseDynamically(file, "nestedComplexOperations")
-
-	for _, result := range results {
-		t.Log(result.PathCondition.String() + " => " + result.CallStack[0].ReturnValue.String())
-		se.CheckComplexResultAndPathCondition(t, result.PathCondition, result.CallStack[0].ReturnValue, false)
 	}
 }

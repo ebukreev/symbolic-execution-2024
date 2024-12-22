@@ -210,12 +210,11 @@ func (functionCall *FunctionCall) String() string {
 
 type Array struct {
 	ComponentType string
-	Size          SymbolicExpression
 	KnownValues   map[SymbolicExpression]SymbolicExpression
 }
 
 func (array *Array) String() string {
-	return fmt.Sprintf("%v[%v]", array.ComponentType, array.Size)
+	return fmt.Sprintf("[]%v", array.ComponentType)
 }
 
 type ArrayAccess struct {
@@ -237,4 +236,13 @@ func (conditional *Conditional) String() string {
 		options = append(options, fmt.Sprintf("%v => %v", key.String(), value.String()))
 	}
 	return strings.Join(options, "\n")
+}
+
+type Ref struct {
+	Representation SymbolicExpression
+	Type           string
+}
+
+func (ref *Ref) String() string {
+	return fmt.Sprintf("*(%v:%v)", ref.Type, ref.Representation.String())
 }

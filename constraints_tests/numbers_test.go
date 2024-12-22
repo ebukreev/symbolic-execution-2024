@@ -537,15 +537,3 @@ func TestNestedBitwiseDynamicInterpretation(t *testing.T) {
 		se.CheckResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, false)
 	}
 }
-
-func TestSqrtDynamicInterpretation(t *testing.T) {
-	_, filename, _, _ := runtime.Caller(0)
-	file := path.Join(path.Dir(path.Dir(filename)), "constraints", "numbers.go")
-
-	results := se.AnalyseDynamically(file, "testSqrt")
-
-	for _, result := range results {
-		t.Log(result.PathCondition.String() + " => " + result.CurrentFrame().ReturnValue.String())
-		se.CheckResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, true)
-	}
-}

@@ -257,11 +257,14 @@ func (sb *SmtBuilder) BuildSmt(expression SymbolicExpression) []z3.Value {
 		case "builtin_imag(ComplexType)":
 			return []z3.Value{sb.BuildSmt(args[0])[1]}
 		case "builtin_len(Type)":
-			_, isArray := expression.(*Array)
-			if isArray {
-				return sb.BuildSmt(expression.(*Array).Size)
+			var tpe string
+			_, isRef := args[0].(*Ref)
+			if isRef {
+				tpe = "int"
+			} else {
+				tpe = GetType(args[0])
 			}
-			funcDecl := sb.uninterpretedFunction(expression.(*FunctionCall).Signature, []string{GetType(args[0])}, "int")
+			funcDecl := sb.uninterpretedFunction(expression.(*FunctionCall).Signature, []string{tpe}, "int")
 			return []z3.Value{funcDecl.Apply(sb.BuildSmt(args[0])[0])}
 		case "math.IsNaN(float64)":
 			return []z3.Value{sb.BuildSmt(&Equals{args[0], &Literal[float64]{math.NaN()}})[0]}
@@ -272,7 +275,11 @@ func (sb *SmtBuilder) BuildSmt(expression SymbolicExpression) []z3.Value {
 		array := sb.Context.FreshConst("arr_", sb.Context.ArraySort(sb.typeSignatureToSort("int"), valueSort))
 
 		for key, value := range expression.(*Array).KnownValues {
-			array = array.(z3.Array).Store(sb.BuildSmt(key)[0], sb.BuildSmt(value)[0])
+			keySmt := sb.BuildSmt(key)[0]
+			valueSmt := sb.BuildSmt(value)[0]
+			if keySmt.Sort().String() == sb.typeSignatureToSort("int").String() && valueSmt.Sort().String() == valueSort.String() {
+				array = array.(z3.Array).Store(keySmt, valueSmt)
+			}
 		}
 		return []z3.Value{array}
 
@@ -293,13 +300,15 @@ func (sb *SmtBuilder) BuildSmt(expression SymbolicExpression) []z3.Value {
 			}
 		}
 		return []z3.Value{result}
+	case *Ref:
+		return sb.BuildSmt(expression.(*Ref).Representation)
 	}
 	panic("unexpected expression")
 }
 
 func (sb *SmtBuilder) typeSignatureToSort(signature string) z3.Sort {
 	if strings.HasPrefix(signature, "[]") {
-		valueSort := sb.typeSignatureToSort(signature[2:])
+		valueSort := sb.typeSignatureToSort("int")
 		return sb.Context.ArraySort(sb.typeSignatureToSort("int"), valueSort)
 	}
 	switch signature {
@@ -320,7 +329,7 @@ func (sb *SmtBuilder) typeSignatureToSort(signature string) z3.Sort {
 	case "int", "uint", "uintptr":
 		return sb.Context.BVSort(bits.UintSize)
 	}
-	return sb.Context.UninterpretedSort(signature)
+	return sb.Context.BVSort(bits.UintSize) // ref
 }
 
 func GetType(se SymbolicExpression) string {
@@ -328,7 +337,39 @@ func GetType(se SymbolicExpression) string {
 	case *InputValue:
 		return se.(*InputValue).Type
 	case *ArrayAccess:
-		return GetType(se.(*ArrayAccess).Array)[2:]
+		return strings.SplitN(GetType(se.(*ArrayAccess).Array), "]", 2)[1]
+	case *Literal[int]:
+		return "int"
+	case *Literal[bool]:
+		return "bool"
+	case *Literal[uint8]:
+		return "uint8"
+	case *Literal[uint16]:
+		return "uint16"
+	case *Literal[uint32]:
+		return "uint32"
+	case *Literal[uint64]:
+		return "uint64"
+	case *Literal[int8]:
+		return "int8"
+	case *Literal[int16]:
+		return "int16"
+	case *Literal[int32]:
+		return "int32"
+	case *Literal[int64]:
+		return "int64"
+	case *Literal[float32]:
+		return "float32"
+	case *Literal[float64]:
+		return "float64"
+	case *Literal[uint]:
+		return "uint"
+	case *Literal[uintptr]:
+		return "uintptr"
+	case *Array:
+		return se.(*Array).String()
+	case *Ref:
+		return se.(*Ref).Type
 	}
 	panic("unexpected expression")
 }
