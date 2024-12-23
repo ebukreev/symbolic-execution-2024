@@ -411,6 +411,7 @@ func (interpreter *DynamicInterpreter) resolveCall(element *ssa.Call) SymbolicEx
 		"builtin_len(Type)",
 		"math.Sqrt(float64)",
 		"math.IsNaN(float64)",
+		"math/rand.Int()",
 	}
 
 	approximations := map[string]string{"math.Sqrt(float64)": "main.sqrt(float64)"}

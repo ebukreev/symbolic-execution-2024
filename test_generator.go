@@ -15,7 +15,9 @@ func (interpreter *DynamicInterpreter) GenerateTest(testName string) string {
 	smtSolver := interpreter.Analyser.Solver.SmtSolver
 	smtBuilder := interpreter.Analyser.SmtBuilder
 	smtSolver.Reset()
-	smtSolver.Assert(smtBuilder.BuildSmt(interpreter.PathCondition)[0].(z3.Bool))
+
+	pcSmt := smtBuilder.BuildSmt(interpreter.PathCondition)[0].(z3.Bool)
+	smtSolver.Assert(pcSmt)
 
 	returnSmt := smtBuilder.BuildSmt(interpreter.CurrentFrame().ReturnValue)[0]
 
@@ -35,6 +37,7 @@ func (interpreter *DynamicInterpreter) GenerateTest(testName string) string {
 	}
 
 	function := interpreter.CurrentFrame().Function
+	sb.WriteString("    // " + interpreter.PathCondition.String() + "\n")
 	sb.WriteString(fmt.Sprintf("    callResult := %v(%v)\n", function.Name(),
 		strings.Join(parseArgs(function, smtSolver.Model(), smtBuilder.Context), ", ")))
 	sb.WriteString(fmt.Sprintf("    returnValue := %v\n", getValue("res", typ, smtSolver.Model(),

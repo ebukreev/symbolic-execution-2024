@@ -9,7 +9,8 @@ import (
 )
 
 type SmtBuilder struct {
-	Context *z3.Context
+	Context    *z3.Context
+	callsCount map[string]int
 }
 
 func (sb *SmtBuilder) BuildSmt(expression SymbolicExpression) []z3.Value {
@@ -250,7 +251,7 @@ func (sb *SmtBuilder) BuildSmt(expression SymbolicExpression) []z3.Value {
 			index, _ := strconv.Atoi(strings.SplitAfter(signature, "_")[1])
 
 			tpe := GetType(args[0])
-			funcDecl := sb.uninterpretedFunction(signature, []string{tpe}, argTypes[index])
+			funcDecl := sb.uninterpretedFunction(strings.Split(strings.SplitAfter(signature, "_")[1], "(")[0], []string{tpe}, argTypes[index])
 			return []z3.Value{funcDecl.Apply(sb.BuildSmt(args[0])[0])}
 		}
 		switch signature {
@@ -266,10 +267,17 @@ func (sb *SmtBuilder) BuildSmt(expression SymbolicExpression) []z3.Value {
 			} else {
 				tpe = GetType(args[0])
 			}
-			funcDecl := sb.uninterpretedFunction(expression.(*FunctionCall).Signature, []string{tpe}, "int")
+			funcDecl := sb.uninterpretedFunction(strings.Split(strings.SplitAfter(expression.(*FunctionCall).Signature, "_")[1], "(")[0], []string{tpe}, "int")
 			return []z3.Value{funcDecl.Apply(sb.BuildSmt(args[0])[0])}
 		case "math.IsNaN(float64)":
 			return []z3.Value{sb.BuildSmt(&Equals{args[0], &Literal[float64]{math.NaN()}})[0]}
+		case "math/rand.Int()":
+			num, ok := sb.callsCount[signature]
+			if !ok {
+				num = 1
+			}
+			sb.callsCount[signature] = num + 1
+			return []z3.Value{sb.uninterpretedFunction(signature+"_"+strconv.Itoa(num), []string{}, "int").Apply()}
 		}
 
 	case *Array:
@@ -416,7 +424,7 @@ func (sb *SmtBuilder) uninterpretedFunction(signature string, args []string, ret
 		argSorts = append(argSorts, sb.typeSignatureToSort(arg))
 	}
 	return sb.Context.FuncDecl(
-		strings.Split(strings.SplitAfter(signature, "_")[1], "(")[0],
+		signature,
 		argSorts,
 		sb.typeSignatureToSort(returnType),
 	)

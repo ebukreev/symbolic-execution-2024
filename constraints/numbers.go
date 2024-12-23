@@ -1,6 +1,9 @@
 package main
 
-import "math"
+import (
+	"math"
+	"math/rand"
+)
 
 func integerOperations(a int, b int) int {
 	if a > b {
@@ -113,4 +116,16 @@ func makeSymbolic[T any]() T {
 
 func assume(expr any) {
 	panic("this api is only for analysis")
+}
+
+func randomTest() int {
+	if rand.Int() == 1 {
+		return 1
+	}
+
+	if rand.Int() == 2 {
+		return 2
+	}
+
+	return 3
 }

@@ -3,6 +3,7 @@ package se
 import (
 	"path"
 	"runtime"
+	"strconv"
 	"symbolic-execution-2024"
 	"testing"
 )
@@ -533,6 +534,22 @@ func TestNestedBitwiseDynamicInterpretation(t *testing.T) {
 	results := se.AnalyseDynamically(file, "nestedBitwise")
 
 	for _, result := range results {
+		t.Log(result.PathCondition.String() + " => " + result.CurrentFrame().ReturnValue.String())
+		se.CheckResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, false)
+	}
+}
+
+func TestRandomTestDynamicInterpretation(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	file := path.Join(path.Dir(path.Dir(filename)), "constraints", "numbers.go")
+
+	results := se.AnalyseDynamically(file, "randomTest")
+
+	i := 1
+	for _, result := range results {
+		println(result.GenerateTest("testRandom" + strconv.Itoa(i)))
+		i++
+
 		t.Log(result.PathCondition.String() + " => " + result.CurrentFrame().ReturnValue.String())
 		se.CheckResultWithPathCondition(t, result.PathCondition, result.CurrentFrame().ReturnValue, false)
 	}

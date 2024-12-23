@@ -67,7 +67,7 @@ func AnalyseDynamically(file string, functionName string) []DynamicInterpreter {
 
 func analyseDynamically(pack *ssa.Package, function *ssa.Function) []DynamicInterpreter {
 	solver := CreateSolver(false)
-	smtBuilder := SmtBuilder{Context: solver.Context}
+	smtBuilder := SmtBuilder{Context: solver.Context, callsCount: make(map[string]int)}
 	analyser := Analyser{make(PriorityQueue, 0), make([]DynamicInterpreter, 0), pack,
 		solver, smtBuilder, &NursPathSelector{}}
 

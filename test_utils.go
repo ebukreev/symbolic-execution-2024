@@ -7,7 +7,7 @@ import (
 
 func CheckResultWithPathCondition(t *testing.T, pathCondition SymbolicExpression, resultExpression SymbolicExpression, isFloatResult bool) {
 	solver := CreateSolver(false)
-	smtBuilder := SmtBuilder{Context: solver.Context}
+	smtBuilder := SmtBuilder{Context: solver.Context, callsCount: make(map[string]int)}
 
 	solver.SmtSolver.Assert(smtBuilder.BuildSmt(pathCondition)[0].(z3.Bool))
 
@@ -46,7 +46,7 @@ func CheckResultWithPathCondition(t *testing.T, pathCondition SymbolicExpression
 
 func CheckComplexResultAndPathCondition(t *testing.T, pathCondition SymbolicExpression, resultExpression SymbolicExpression, isFloatResult bool) {
 	solver := CreateSolver(false)
-	smtBuilder := SmtBuilder{Context: solver.Context}
+	smtBuilder := SmtBuilder{Context: solver.Context, callsCount: make(map[string]int)}
 
 	builtSmt := smtBuilder.BuildSmt(pathCondition)
 	for i := 0; i < len(builtSmt); i++ {
