@@ -136,6 +136,8 @@ func (sb *SmtBuilder) BuildSmt(expression SymbolicExpression) []z3.Value {
 		value := sb.BuildSmt(expression.(*Cast).Value)[0]
 		if value.Sort().Kind() == z3.KindBV && expression.(*Cast).To == "float64" {
 			return []z3.Value{value.(z3.BV).SToFloat(sb.Context.FloatSort(11, 53))}
+		} else if value.Sort().Kind() == z3.KindBV {
+			return []z3.Value{value.(z3.BV)}
 		} else {
 			panic("unsupported cast")
 		}

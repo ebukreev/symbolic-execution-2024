@@ -80,7 +80,11 @@ func analyseDynamically(pack *ssa.Package, function *ssa.Function) []DynamicInte
 	}
 	analyser.StatesQueue.Push(&Item{value: interpreter, priority: 1})
 	for analyser.StatesQueue.Len() != 0 {
-		interpretationResults := InterpretDynamically(analyser.StatesQueue.Pop().(*Item).value)
+		state := analyser.StatesQueue.Pop().(*Item).value
+		if len(state.CurrentFrame().BlocksStack) > 50 {
+			continue
+		}
+		interpretationResults := InterpretDynamically(state)
 		for _, interpretationResult := range interpretationResults {
 			if len(interpretationResult.CallStack) == 1 && interpretationResult.CurrentFrame().ReturnValue != nil {
 				analyser.Results = append(analyser.Results, interpretationResult)

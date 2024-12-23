@@ -219,6 +219,9 @@ func (interpreter *DynamicInterpreter) resolveConst(element *ssa.Const) Symbolic
 	case "int":
 		value, _ := strconv.Atoi(element.Value.String())
 		return &Literal[int]{value}
+	case "int16":
+		value, _ := strconv.Atoi(element.Value.String())
+		return &Literal[int16]{int16(value)}
 	case "uint":
 		value, _ := strconv.ParseUint(element.Value.String(), 10, 64)
 		return &Literal[uint]{uint(value)}
